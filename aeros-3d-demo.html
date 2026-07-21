@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AEROS — Live Operations Demo (3D)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0B1121;
+    --panel:#151F38;
+    --panel2:#1E2D4F;
+    --line:#2C4270;
+    --blue:#2563EB;
+    --white:#FFFFFF;
+    --light-blue:#93C5FD;
+    --slate:#64748B;
+    --alert:#FF3B7A;
+    --amber:#F5A623;
+    --green:#34D399;
+    --ink:#F0F4F8;
+    --ink-dim:#94A3B8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--void);color:var(--ink);font-family:'JetBrains Mono',monospace;}
+  body{padding:18px;}
+  .app-shell{max-width:1220px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+
+  .header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;
+    border-bottom:1px solid var(--line);padding-bottom:14px;}
+  .eyebrow{font-size:11px;letter-spacing:0.18em;color:var(--ink-dim);margin-bottom:6px;}
+  .wordmark{font-family:'Sora',sans-serif;font-weight:800;font-size:36px;letter-spacing:0.01em;
+    margin:0;color:var(--white);}
+  .subtitle{font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  .header-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+  .status-pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:0.1em;
+    border:1px solid var(--line);border-radius:20px;padding:5px 12px;color:var(--white);background:rgba(37,99,235,0.12);}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--white);box-shadow:0 0 8px var(--blue);
+    animation:pulse 1.8s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+  .sim-clock{font-family:'Sora',sans-serif;font-size:20px;font-weight:700;color:var(--light-blue);letter-spacing:0.04em;}
+
+  .node-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .node-card{position:relative;background:linear-gradient(160deg, var(--panel), var(--panel2));
+    border:1px solid var(--line);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:3px;}
+  .node-card::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:2px;
+    background:var(--node-color, var(--light-blue));}
+  .node-name{font-size:10.5px;letter-spacing:0.07em;color:var(--white);font-weight:600;}
+  .node-role{font-size:9.5px;color:var(--ink-dim);line-height:1.4;}
+  .node-status{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:0.08em;color:var(--node-color, var(--light-blue));margin-top:1px;}
+  .node-status .dot2{width:5px;height:5px;border-radius:50%;background:var(--node-color, var(--light-blue));
+    box-shadow:0 0 6px var(--node-color, var(--light-blue));animation:pulse 1.8s ease-in-out infinite;}
+  .brain-note{font-size:10.5px;color:var(--ink-dim);line-height:1.6;padding:2px 2px 0;}
+  .brain-note b{color:var(--light-blue);font-weight:600;}
+
+  .stats-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+  .stat-card{background:linear-gradient(160deg, var(--panel), var(--panel2));border:1px solid var(--line);
+    border-radius:10px;padding:13px 15px;}
+  .stat-value{font-family:'Sora',sans-serif;font-size:24px;font-weight:700;color:var(--white);line-height:1.1;}
+  .stat-label{font-size:10px;letter-spacing:0.09em;color:var(--ink-dim);margin-top:5px;}
+
+  .main-grid{display:grid;grid-template-columns:2.15fr 1fr;gap:12px;align-items:stretch;}
+  .map-panel{position:relative;background:radial-gradient(ellipse at 50% 20%, #1A2952, var(--void));
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:grab;}
+  .map-panel:active{cursor:grabbing;}
+  canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;touch-action:none;}
+
+  .scene-labels{position:absolute;inset:0;pointer-events:none;}
+  .gate-label{position:absolute;transform:translate(-50%,-100%);pointer-events:none;
+    font-size:10.5px;text-align:center;white-space:nowrap;transition:opacity 0.15s ease;}
+  .gate-label .code{color:var(--ink);background:rgba(11,17,33,0.7);border:1px solid var(--line);
+    border-radius:4px;padding:2px 6px;letter-spacing:0.05em;}
+  .gate-label .predict{display:block;margin-top:3px;color:var(--light-blue);background:rgba(37,99,235,0.18);
+    border:1px solid rgba(147,197,253,0.4);border-radius:4px;padding:2px 6px;font-size:9.5px;}
+
+  .legend{position:absolute;top:12px;left:12px;background:rgba(11,17,33,0.82);border:1px solid var(--line);
+    border-radius:8px;padding:9px 11px;font-size:10px;line-height:1.95;backdrop-filter:blur(2px);}
+  .legend-title{color:var(--ink-dim);letter-spacing:0.09em;margin-bottom:2px;font-size:9px;}
+  .legend-item{display:flex;align-items:center;gap:6px;color:var(--ink-dim);}
+  .chip{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;}
+  .chip.white{background:var(--white);box-shadow:0 0 5px var(--white);}
+  .chip.slate{background:var(--slate);}
+  .chip.light-blue{background:var(--light-blue);box-shadow:0 0 5px var(--light-blue);}
+  .chip.alert{background:var(--alert);box-shadow:0 0 5px var(--alert);}
+  .chip.amber{background:var(--amber);box-shadow:0 0 5px var(--amber);}
+  .gate-label .maint{display:block;margin-top:3px;color:var(--amber);background:rgba(245,166,35,0.18);
+    border:1px solid rgba(245,166,35,0.5);border-radius:4px;padding:2px 6px;font-size:9.5px;}
+
+  .cam-hint{position:absolute;bottom:12px;left:12px;font-size:9.5px;color:var(--ink-dim);
+    background:rgba(11,17,33,0.7);border:1px solid var(--line);border-radius:6px;padding:5px 9px;
+    letter-spacing:0.04em;}
+
+  .replan-badge{position:absolute;top:12px;right:12px;background:rgba(37,99,235,0.16);
+    border:1px solid var(--blue);color:var(--light-blue);font-size:10px;letter-spacing:0.12em;
+    padding:6px 11px;border-radius:20px;opacity:0;transition:opacity 0.3s ease;pointer-events:none;}
+  .replan-badge.visible{opacity:1;}
+  .replan-badge::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--light-blue);margin-right:6px;animation:pulse 1s ease-in-out infinite;}
+
+  .webgl-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:30px;color:var(--ink-dim);font-size:12px;line-height:1.7;}
+
+  .sidebar{display:flex;flex-direction:column;gap:12px;min-height:0;}
+  .panel{background:linear-gradient(160deg, var(--panel), var(--panel2));border:1px solid var(--line);
+    border-radius:10px;padding:13px;display:flex;flex-direction:column;min-height:0;}
+  .panel-title{font-size:10px;letter-spacing:0.1em;color:var(--ink-dim);margin-bottom:9px;flex:none;}
+  .cycle-track{display:flex;gap:4px;margin-bottom:10px;flex:none;}
+  .cycle-step{flex:1;text-align:center;font-size:9px;letter-spacing:0.08em;padding:5px 2px;
+    border-radius:6px;border:1px solid var(--line);color:var(--ink-dim);transition:all 0.25s ease;}
+  .cycle-step.active{color:var(--void);background:var(--light-blue);border-color:var(--light-blue);font-weight:700;}
+  .cycle-arrow{color:var(--ink-dim);font-size:9px;align-self:center;}
+  .param-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    font-size:11px;padding:5px 0;border-bottom:1px dashed var(--line);}
+  .param-row:last-child{border-bottom:none;}
+  .param-name{color:var(--ink-dim);flex:none;letter-spacing:0.03em;}
+  .param-val{color:var(--light-blue);text-align:right;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .param-val.warn{color:var(--amber);}
+  .param-val.ok{color:var(--green);}
+  .predictive-panel{flex:none;}
+  .forecast-panel{flex:none;}
+  .forecast-item{font-size:11.5px;color:var(--light-blue);padding:5px 0;border-bottom:1px dashed var(--line);
+    display:flex;justify-content:space-between;gap:8px;}
+  .forecast-item span:first-child{flex:1;min-width:0;}
+  .forecast-item:last-child{border-bottom:none;}
+  .forecast-eta{color:var(--ink-dim);flex:none;}
+  .forecast-empty{font-size:11px;color:var(--ink-dim);padding:4px 0;}
+
+  .log-panel{flex:none;height:320px;}
+  .log-list{overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px;
+    flex:1;min-height:0;}
+  .log-entry{border-left:3px solid var(--light-blue);background:rgba(0,0,0,0.14);border-radius:5px;
+    padding:6px 9px;font-size:11px;display:flex;justify-content:space-between;gap:8px;
+    animation:slidein 0.25s ease;}
+  @keyframes slidein{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  .log-entry--electric{border-left-color:var(--white);}
+  .log-entry--legacy{border-left-color:var(--slate);}
+  .log-entry--fault{border-left-color:var(--alert);}
+  .log-entry--info{border-left-color:var(--light-blue);}
+  .log-entry--gate{border-left-color:var(--amber);}
+  .log-msg{color:var(--ink);flex:1;min-width:0;}
+  .log-time{color:var(--ink-dim);flex:none;}
+
+  .controls-bar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--line);
+    padding-top:14px;}
+  .ctrl-btn{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:20px;
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.06em;padding:9px 15px;
+    cursor:pointer;transition:border-color 0.15s ease, color 0.15s ease, background 0.15s ease;}
+  .ctrl-btn:hover{border-color:var(--white);color:var(--white);background:var(--panel2);}
+  .ctrl-btn:focus-visible{outline:2px solid var(--light-blue);outline-offset:2px;}
+  .ctrl-btn--alert{border-color:rgba(255,59,122,0.4);color:var(--alert);}
+  .ctrl-btn--alert:hover{border-color:var(--alert);color:var(--alert);background:rgba(255,59,122,0.1);}
+  .disclaimer{font-size:10.5px;color:var(--ink-dim);margin-left:auto;}
+
+  @media (max-width:900px){
+    .main-grid{grid-template-columns:1fr;}
+    .node-strip{grid-template-columns:repeat(2,1fr);}
+    .stats-strip{grid-template-columns:repeat(2,1fr);}
+    .wordmark{font-size:28px;}
+    .disclaimer{margin-left:0;width:100%;order:5;}
+    .log-panel{height:260px;}
+    .gate-label{font-size:9px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .dot{animation:none;}
+    .log-entry{animation:none;}
+    .replan-badge::before{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <header class="header">
+    <div class="brand">
+      <div class="eyebrow">LIVE OPERATIONS DEMO · 3D</div>
+      <h1 class="wordmark">AEROS</h1>
+      <div class="subtitle">Autonomous Eco-Responsive Airport Operating System — the airport's unified command brain</div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill"><span class="dot"></span>OPERATIONAL</div>
+      <div class="sim-clock" id="simClock">06:00</div>
+    </div>
+  </header>
+
+  <div class="brain-note">One node-connected intelligence, four subsystems: <b>Gate Scheduling AI</b>, the <b>Predictive Engine</b>, the <b>Swarm Fleet</b>, and the <b>Carbon Engine</b> act as extensions of a single decision-maker, not separate tools.</div>
+
+  <section class="node-strip">
+    <div class="node-card" style="--node-color:var(--amber)">
+      <div class="node-name">GATE SCHEDULING AI</div>
+      <div class="node-role">Assigns arrivals, reroutes around closures/conflicts</div>
+      <div class="node-status" id="nodeGateStatus"><span class="dot2"></span>NOMINAL</div>
+    </div>
+    <div class="node-card" style="--node-color:var(--light-blue)">
+      <div class="node-name">PREDICTIVE ENGINE</div>
+      <div class="node-role">Predict → Optimize → Execute across live conditions</div>
+      <div class="node-status" id="nodePredictStatus"><span class="dot2"></span>MONITORING</div>
+    </div>
+    <div class="node-card" style="--node-color:var(--white)">
+      <div class="node-name">SWARM FLEET</div>
+      <div class="node-role">Decentralized ground units, self-healing on failure</div>
+      <div class="node-status" id="nodeSwarmStatus"><span class="dot2"></span>NOMINAL</div>
+    </div>
+    <div class="node-card" style="--node-color:var(--green)">
+      <div class="node-name">CARBON ENGINE</div>
+      <div class="node-role">Scores every tug, route, unit &amp; gate by carbon cost</div>
+      <div class="node-status" id="nodeCarbonStatus"><span class="dot2"></span>ACTIVE</div>
+    </div>
+  </section>
+
+  <section class="stats-strip">
+    <div class="stat-card">
+      <div class="stat-value" id="statCarbon">0.0 kg</div>
+      <div class="stat-label">CO₂ AVOIDED</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statOTP">100%</div>
+      <div class="stat-label">ON-TIME PERFORMANCE</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statFleet">6/8</div>
+      <div class="stat-label">ELECTRIC UNITS ON FLEET</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statMoves">0</div>
+      <div class="stat-label">ACTIVE MOVEMENTS</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statGateAI">0</div>
+      <div class="stat-label">GATE AI REASSIGNMENTS</div>
+    </div>
+  </section>
+
+  <section class="main-grid">
+    <div class="map-panel" id="mapPanel">
+      <canvas id="scene3d"></canvas>
+      <div class="scene-labels" id="sceneLabels"></div>
+      <div class="legend">
+        <div class="legend-title">LEGEND</div>
+        <div class="legend-item"><span class="chip white"></span>Electric unit</div>
+        <div class="legend-item"><span class="chip slate"></span>Legacy unit</div>
+        <div class="legend-item"><span class="chip light-blue"></span>Predictive marker</div>
+        <div class="legend-item"><span class="chip alert"></span>Fault</div>
+        <div class="legend-item"><span class="chip amber"></span>Gate AI / maintenance</div>
+        <div class="legend-title" style="margin-top:5px;">FLEET ROLES</div>
+        <div style="color:var(--ink-dim);font-size:9px;">Tug · Baggage · Catering · Fuel</div>
+      </div>
+      <div class="cam-hint">drag to orbit · scroll to zoom</div>
+      <div class="replan-badge" id="replanBadge">REPLANNING</div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="panel predictive-panel">
+        <div class="panel-title">PREDICTIVE ENGINE — PREDICT → OPTIMIZE → EXECUTE</div>
+        <div class="cycle-track">
+          <div class="cycle-step" id="cyclePredict">PREDICT</div>
+          <div class="cycle-step" id="cycleOptimize">OPTIMIZE</div>
+          <div class="cycle-step" id="cycleExecute">EXECUTE</div>
+        </div>
+        <div class="param-row"><span class="param-name">Flight schedule</span><span class="param-val" id="paramFlight">on-time</span></div>
+        <div class="param-row"><span class="param-name">Gate schedule</span><span class="param-val" id="paramGate">5/5 open</span></div>
+        <div class="param-row"><span class="param-name">Weather</span><span class="param-val" id="paramWeather">clear</span></div>
+        <div class="param-row"><span class="param-name">Taxiway traffic</span><span class="param-val" id="paramTraffic">low</span></div>
+        <div class="param-row"><span class="param-name">Maintenance</span><span class="param-val" id="paramMaint">none scheduled</span></div>
+      </div>
+      <div class="panel forecast-panel">
+        <div class="panel-title">PREDICTED — NEXT 60S</div>
+        <div class="forecast-list" id="forecastList"></div>
+      </div>
+      <div class="panel log-panel">
+        <div class="panel-title">OPS LOG</div>
+        <div class="log-list" id="logList"></div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="controls-bar">
+    <button class="ctrl-btn" id="btnPause">PAUSE</button>
+    <button class="ctrl-btn" id="btnSpeed">SPEED · 1×</button>
+    <button class="ctrl-btn ctrl-btn--alert" id="btnFault">SIMULATE UNIT FAILURE</button>
+    <button class="ctrl-btn ctrl-btn--alert" id="btnWeather">SIMULATE WEATHER DELAY</button>
+    <button class="ctrl-btn ctrl-btn--alert" id="btnMaint">SIMULATE GATE CLOSURE</button>
+    <div class="disclaimer">Illustrative 3D simulation — not connected to live airport data.</div>
+  </section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================================
+     PART 1 — PURE SIMULATION CORE (no DOM, no THREE — independently tested)
+     ========================================================================= */
+  const SimCore = (function(){
+    const GATE_DEFS = [
+      { id: 0, label: 'A1', pos: { x: -56, z: -48 } },
+      { id: 1, label: 'A2', pos: { x: -28, z: -48 } },
+      { id: 2, label: 'B1', pos: { x: 0, z: -48 } },
+      { id: 3, label: 'B2', pos: { x: 28, z: -48 } },
+      { id: 4, label: 'B3', pos: { x: 56, z: -48 } }
+    ];
+    const HUB_SLOTS = [];
+    [-100, -85, -70].forEach(x => [6, 18, 30, 42].forEach(z => HUB_SLOTS.push({ x, z })));
+    const VEHICLE_DEFS = [
+      { id: 'T-01', kind: 'tug', fuel: 'electric' },
+      { id: 'T-02', kind: 'tug', fuel: 'electric' },
+      { id: 'T-03', kind: 'tug', fuel: 'legacy' },
+      { id: 'BG-01', kind: 'baggage', fuel: 'electric' },
+      { id: 'BG-02', kind: 'baggage', fuel: 'electric' },
+      { id: 'BG-03', kind: 'baggage', fuel: 'legacy' },
+      { id: 'CT-01', kind: 'catering', fuel: 'electric' },
+      { id: 'CT-02', kind: 'catering', fuel: 'legacy' },
+      { id: 'FL-01', kind: 'fuel', fuel: 'electric' },
+      { id: 'FL-02', kind: 'fuel', fuel: 'electric' }
+    ];
+    // one turnaround sequence per gate: each service has its own dock position around the aircraft,
+    // its own trigger/preview timing, and its own working duration — tug (pushback) always runs last.
+    const SERVICE_DEFS = [
+      { type: 'baggage', label: 'Baggage', triggerAt: 3.0, previewAt: 0.0, duration: 4.0, dx: 8, dz: 7 },
+      { type: 'catering', label: 'Catering', triggerAt: 5.5, previewAt: 2.5, duration: 3.0, dx: 11, dz: 2 },
+      { type: 'fuel', label: 'Fuel', triggerAt: 7.5, previewAt: 4.5, duration: 3.5, dx: -11, dz: 2 },
+      { type: 'tug', label: 'Pushback', triggerAt: 12.5, previewAt: 9.0, duration: 1.5, dx: -8, dz: 7 }
+    ];
+    const CARBON_CREDIT = { tug: 3.2, baggage: 0.6, catering: 0.9, fuel: 1.4 };
+    function dist(x1, z1, x2, z2) { return Math.hypot(x2 - x1, z2 - z1); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    function freshServiceFlags() {
+      const flags = {};
+      SERVICE_DEFS.forEach(function (svc) { flags[svc.type] = false; });
+      return flags;
+    }
+
+    function createState() {
+      const gates = GATE_DEFS.map(g => ({
+        id: g.id, label: g.label, pos: g.pos,
+        state: 'empty', enteredAt: -(g.id * 3 + 2),
+        dispatched: freshServiceFlags(),
+        previewShown: freshServiceFlags(),
+        aircraft: { opacity: 0, x: g.pos.x, z: g.pos.z },
+        maintenance: false, maintenanceUntil: 0
+      }));
+      const vehicles = VEHICLE_DEFS.map((v, i) => ({
+        id: v.id, kind: v.kind, fuel: v.fuel,
+        home: HUB_SLOTS[i],
+        x: HUB_SLOTS[i].x, z: HUB_SLOTS[i].z,
+        targetX: HUB_SLOTS[i].x, targetZ: HUB_SLOTS[i].z,
+        state: 'idle', taskGate: null, taskType: null,
+        workEnteredAt: 0, faultEnteredAt: 0
+      }));
+      gates[0].state = 'parked'; gates[0].enteredAt = -6; gates[0].aircraft.opacity = 1;
+      gates[2].state = 'parked'; gates[2].enteredAt = -2; gates[2].aircraft.opacity = 1;
+
+      return {
+        elapsed: 0, simMinutes: 360, carbonSaved: 0,
+        displayOTP: 100, targetOTP: 100,
+        weatherEventEnd: null, weatherActive: false,
+        gateReassignments: 0, pendingGateReroute: null,
+        gates, vehicles, events: [], effects: [],
+        log: function (msg, color) {
+          this.events.push({ msg: msg, color: color, time: this.simMinutes });
+          if (this.events.length > 200) this.events.shift();
+        },
+        pushEffect: function (eff) {
+          eff.t0 = this.elapsed;
+          eff.id = Math.random().toString(36).slice(2);
+          this.effects.push(eff);
+        }
+      };
+    }
+
+    function previewDispatch(state, type, gate) {
+      const svc = SERVICE_DEFS.filter(s => s.type === type)[0];
+      const targetX = gate.pos.x + svc.dx;
+      const targetZ = gate.pos.z + svc.dz;
+      const idle = state.vehicles.filter(v => v.kind === type && v.state === 'idle');
+      if (idle.length === 0) return null;
+      const withD = idle.map(v => ({ v: v, d: dist(v.x, v.z, targetX, targetZ) }));
+      const minD = Math.min.apply(null, withD.map(o => o.d));
+      const near = withD.filter(o => o.d <= minD * 1.4 + 18);
+      near.sort((a, b) => {
+        const fa = a.v.fuel === 'electric' ? 0 : 1, fb = b.v.fuel === 'electric' ? 0 : 1;
+        if (fa !== fb) return fa - fb;
+        return a.d - b.d;
+      });
+      return near[0].v;
+    }
+
+    function dispatch(state, type, gate) {
+      const svc = SERVICE_DEFS.filter(s => s.type === type)[0];
+      const targetX = gate.pos.x + svc.dx;
+      const targetZ = gate.pos.z + svc.dz;
+      const idle = state.vehicles.filter(v => v.kind === type && v.state === 'idle');
+      if (idle.length === 0) {
+        state.log('NO ' + type.toUpperCase() + ' UNITS AVAILABLE — request queued, gate ' + gate.label, 'legacy');
+        gate.dispatched[type] = false;
+        return null;
+      }
+      idle.forEach(v => { v._d = dist(v.x, v.z, targetX, targetZ); });
+      const minD = Math.min.apply(null, idle.map(v => v._d));
+      const tol = minD * 1.4 + 18;
+      const near = idle.filter(v => v._d <= tol);
+      near.sort((a, b) => {
+        const fa = a.fuel === 'electric' ? 0 : 1, fb = b.fuel === 'electric' ? 0 : 1;
+        if (fa !== fb) return fa - fb;
+        return a._d - b._d;
+      });
+      const chosen = near[0];
+      const fromX = chosen.x, fromZ = chosen.z;
+      chosen.state = 'moving'; chosen.targetX = targetX; chosen.targetZ = targetZ;
+      chosen.taskGate = gate.id; chosen.taskType = type;
+
+      const hadLegacyNearby = near.some(v => v.fuel === 'legacy');
+      if (chosen.fuel === 'electric') {
+        const credit = (CARBON_CREDIT[type] || 0.8) * (0.85 + Math.random() * 0.3);
+        state.carbonSaved += credit;
+        const msg = hadLegacyNearby
+          ? (type.toUpperCase() + ' · ' + gate.label + ' — ' + chosen.id + ' (electric) selected over nearer legacy unit — equal ETA, lower carbon')
+          : (type.toUpperCase() + ' · ' + gate.label + ' — ' + chosen.id + ' (electric) dispatched, ' + Math.round(chosen._d) + 'm');
+        state.log(msg, 'electric');
+      } else {
+        state.log(type.toUpperCase() + ' · ' + gate.label + ' — ' + chosen.id + ' (legacy) dispatched — nearest available unit', 'legacy');
+      }
+      state.pushEffect({ type: 'dispatchBeam', fromX: fromX, fromZ: fromZ, toX: targetX, toZ: targetZ, color: chosen.fuel });
+      return chosen;
+    }
+
+    function triggerFailure(state) {
+      const active = state.vehicles.filter(v => v.state === 'moving' || v.state === 'working');
+      if (active.length === 0) {
+        state.log('No active units to disrupt right now — try again shortly', 'info');
+        return false;
+      }
+      const v = active[Math.floor(Math.random() * active.length)];
+      state.log('FAULT DETECTED — ' + v.id + ' offline mid-task', 'fault');
+      state.pushEffect({ type: 'faultBurst', x: v.x, z: v.z });
+      const gateId = v.taskGate, taskType = v.taskType;
+      v.state = 'fault';
+      v.faultEnteredAt = state.elapsed;
+      const gate = state.gates.filter(g => g.id === gateId)[0];
+      if (gate && gate.state === 'parked') {
+        gate.dispatched[taskType] = false;
+        const replacement = dispatch(state, taskType, gate);
+        if (replacement) {
+          state.log('SWARM REROUTE — task reassigned autonomously to ' + replacement.id, 'electric');
+          state.pushEffect({ type: 'rerouteBeam', fromX: v.x, fromZ: v.z, toX: replacement.x, toZ: replacement.z });
+        }
+      }
+      return true;
+    }
+
+    function triggerWeather(state) {
+      state.log('WEATHER SYSTEM DETECTED — predictive replan initiated', 'info');
+      state.weatherEventEnd = state.elapsed + 10;
+      state.weatherActive = true;
+      state.targetOTP = 100 - (5 + Math.random() * 6);
+      state.gates.forEach(g => {
+        if (g.state === 'parked') {
+          SERVICE_DEFS.forEach(function (svc) {
+            if (!g.dispatched[svc.type]) g.previewShown[svc.type] = true;
+          });
+        }
+      });
+      return true;
+    }
+
+    function triggerMaintenance(state) {
+      if (state.gates.some(g => g.maintenance)) {
+        state.log('Gate maintenance already in progress — request queued', 'info');
+        return false;
+      }
+      const eligible = state.gates.filter(g => g.state === 'empty');
+      if (eligible.length === 0) {
+        state.log('No gate currently free to schedule maintenance on', 'info');
+        return false;
+      }
+      // pick the gate soonest due for its next arrival, so the closure forces a real reroute
+      eligible.sort((a, b) => {
+        const ta = state.elapsed - a.enteredAt, tb = state.elapsed - b.enteredAt;
+        const remA = (6 + a.id % 3) - ta, remB = (6 + b.id % 3) - tb;
+        return remA - remB;
+      });
+      const closed = eligible[0];
+      closed.maintenance = true;
+      closed.maintenanceUntil = state.elapsed + 16;
+      state.log('MAINTENANCE ALERT — gate ' + closed.label + ' flagged closed, gate-scheduling AI recalculating assignments', 'gate');
+
+      const alternates = state.gates.filter(g => g.id !== closed.id && g.state === 'empty' && !g.maintenance);
+      if (alternates.length > 0) {
+        // lowest-carbon / shortest-taxi gate wins: minimize distance to the runway threshold
+        alternates.forEach(g => { g._taxiDist = dist(g.pos.x, g.pos.z, 0, 82); });
+        alternates.sort((a, b) => a._taxiDist - b._taxiDist);
+        const target = alternates[0];
+        target.enteredAt = state.elapsed - (6 + target.id % 3) + 2; // pulls its next arrival forward
+        state.gateReassignments += 1;
+        const carbonCredit = 1.4 + Math.random() * 0.8;
+        state.carbonSaved += carbonCredit;
+        state.log('GATE AI — inbound flight rerouted ' + closed.label + ' → ' + target.label + ': shortest taxi distance, lowest-carbon route', 'gate');
+        state.pushEffect({ type: 'rerouteBeam', fromX: closed.pos.x, fromZ: closed.pos.z, toX: target.pos.x, toZ: target.pos.z, color: 'gate' });
+      } else {
+        state.log('GATE AI — no gate free yet, holding inbound flight for next available slot', 'gate');
+        state.pendingGateReroute = { closedId: closed.id, closedLabel: closed.label };
+      }
+      return true;
+    }
+
+    function resolvePendingReroute(state, g) {
+      if (!state.pendingGateReroute || g.id === state.pendingGateReroute.closedId || g.maintenance) return;
+      const closedLabel = state.pendingGateReroute.closedLabel;
+      state.pendingGateReroute = null;
+      g.enteredAt = state.elapsed - (6 + g.id % 3) + 2;
+      state.gateReassignments += 1;
+      const carbonCredit = 1.4 + Math.random() * 0.8;
+      state.carbonSaved += carbonCredit;
+      state.log('GATE AI — held flight from ' + closedLabel + ' now assigned to ' + g.label + ', slot opened', 'gate');
+      state.pushEffect({ type: 'rerouteBeam', fromX: g.pos.x, fromZ: g.pos.z, toX: g.pos.x, toZ: g.pos.z, color: 'gate' });
+    }
+
+    function updateGate(state, g) {
+      if (g.maintenance) {
+        if (state.elapsed >= g.maintenanceUntil) {
+          g.maintenance = false;
+          state.log('MAINTENANCE COMPLETE — gate ' + g.label + ' returned to active pool', 'gate');
+        }
+        return;
+      }
+      const t = state.elapsed - g.enteredAt;
+      if (g.state === 'empty') {
+        if (t > 6 + (g.id % 3)) {
+          g.state = 'arriving'; g.enteredAt = state.elapsed;
+          g.aircraft.opacity = 0; g.aircraft.x = g.pos.x; g.aircraft.z = g.pos.z;
+          g.dispatched = freshServiceFlags();
+          g.previewShown = freshServiceFlags();
+        }
+      } else if (g.state === 'arriving') {
+        g.aircraft.opacity = clamp(t / 1.2, 0, 1);
+        if (t > 1.2) { g.state = 'parked'; g.enteredAt = state.elapsed; }
+      } else if (g.state === 'parked') {
+        g.aircraft.opacity = 1;
+        SERVICE_DEFS.forEach(function (svc) {
+          if (!g.dispatched[svc.type] && t > svc.triggerAt) { dispatch(state, svc.type, g); g.dispatched[svc.type] = true; }
+          else if (!g.dispatched[svc.type] && !g.previewShown[svc.type] && t > svc.previewAt) { g.previewShown[svc.type] = true; }
+        });
+      } else if (g.state === 'departing') {
+        const p = clamp(t / 3, 0, 1);
+        g.aircraft.x = lerp(g.pos.x, 0, p);
+        g.aircraft.z = lerp(g.pos.z, 70, p);
+        g.aircraft.opacity = 1 - p * 0.9;
+        if (p >= 1) { g.state = 'empty'; g.enteredAt = state.elapsed; g.aircraft.opacity = 0; resolvePendingReroute(state, g); }
+      }
+    }
+
+    function updateVehicle(state, v, dt, speedMul) {
+      const speed = 26 * speedMul;
+      if (v.state === 'moving') {
+        const d = dist(v.x, v.z, v.targetX, v.targetZ);
+        if (d < 1.2) { v.state = 'working'; v.workEnteredAt = state.elapsed; }
+        else {
+          const step = Math.min(speed * dt, d);
+          v.x += (v.targetX - v.x) / d * step;
+          v.z += (v.targetZ - v.z) / d * step;
+        }
+      } else if (v.state === 'working') {
+        const svcDef = SERVICE_DEFS.filter(s => s.type === v.taskType)[0];
+        const dur = svcDef ? svcDef.duration : 2.5;
+        if (state.elapsed - v.workEnteredAt >= dur) {
+          if (v.taskType === 'tug') {
+            const gate = state.gates.filter(g => g.id === v.taskGate)[0];
+            if (gate) { gate.state = 'departing'; gate.enteredAt = state.elapsed; }
+            v.state = 'working-departure'; v.workEnteredAt = state.elapsed;
+          } else {
+            v.state = 'returning'; v.targetX = v.home.x; v.targetZ = v.home.z;
+          }
+        }
+      } else if (v.state === 'working-departure') {
+        const gate = state.gates.filter(g => g.id === v.taskGate)[0];
+        const p = gate ? clamp((state.elapsed - gate.enteredAt) / 3, 0, 1) : 1;
+        const tugDef = SERVICE_DEFS.filter(s => s.type === 'tug')[0];
+        const gx = gate ? gate.pos.x + tugDef.dx : v.x;
+        const gz = gate ? gate.pos.z + tugDef.dz : v.z;
+        v.x = lerp(gx, 0, p);
+        v.z = lerp(gz, 60, p);
+        if (p >= 1) { v.state = 'returning'; v.targetX = v.home.x; v.targetZ = v.home.z; }
+      } else if (v.state === 'returning') {
+        const d = dist(v.x, v.z, v.home.x, v.home.z);
+        if (d < 1.2) { v.state = 'idle'; v.x = v.home.x; v.z = v.home.z; }
+        else {
+          const step = Math.min(speed * dt, d);
+          v.x += (v.home.x - v.x) / d * step;
+          v.z += (v.home.z - v.z) / d * step;
+        }
+      } else if (v.state === 'fault') {
+        if (state.elapsed - v.faultEnteredAt > 4) { v.state = 'returning'; v.targetX = v.home.x; v.targetZ = v.home.z; }
+      }
+    }
+
+    function tick(state, dt, speedMul) {
+      state.elapsed += dt;
+      state.simMinutes = 360 + state.elapsed * 4;
+      state.gates.forEach(g => updateGate(state, g));
+      state.vehicles.forEach(v => updateVehicle(state, v, dt, speedMul));
+      if (state.weatherEventEnd !== null && state.elapsed >= state.weatherEventEnd) {
+        state.weatherActive = false;
+        state.log('REPLAN COMPLETE — disruption absorbed, 0 cascading delays', 'electric');
+        state.weatherEventEnd = null;
+        state.targetOTP = 97 + Math.random() * 3;
+      }
+      state.displayOTP += (state.targetOTP - state.displayOTP) * Math.min(1, dt * 0.6);
+      state.effects = state.effects.filter(e => state.elapsed - e.t0 < 2.5);
+    }
+
+    function getForecast(state) {
+      const items = [];
+      state.gates.forEach(g => {
+        if (g.state === 'parked') {
+          const t = state.elapsed - g.enteredAt;
+          SERVICE_DEFS.forEach(function (svc) {
+            if (!g.dispatched[svc.type]) items.push({ label: g.label + ' · ' + svc.label, eta: Math.max(0, svc.triggerAt - t) });
+          });
+        }
+      });
+      items.sort((a, b) => a.eta - b.eta);
+      return items;
+    }
+
+    function formatClock(m) {
+      m = ((m % 1440) + 1440) % 1440;
+      const hh = String(Math.floor(m / 60)).padStart(2, '0');
+      const mm = String(Math.floor(m % 60)).padStart(2, '0');
+      return hh + ':' + mm;
+    }
+
+    return { createState, tick, dispatch, previewDispatch, triggerFailure, triggerWeather, triggerMaintenance,
+             getForecast, formatClock, GATE_DEFS, HUB_SLOTS, VEHICLE_DEFS, SERVICE_DEFS };
+  })();
+
+  /* =========================================================================
+     PART 2 — DOM REFERENCES & UI BINDINGS (work with or without WebGL)
+     ========================================================================= */
+  const mapPanelEl = document.getElementById('mapPanel');
+  const canvas = document.getElementById('scene3d');
+  const sceneLabelsEl = document.getElementById('sceneLabels');
+  const logListEl = document.getElementById('logList');
+  const forecastListEl = document.getElementById('forecastList');
+  const replanBadgeEl = document.getElementById('replanBadge');
+  const simClockEl = document.getElementById('simClock');
+  const statCarbonEl = document.getElementById('statCarbon');
+  const statOTPEl = document.getElementById('statOTP');
+  const statFleetEl = document.getElementById('statFleet');
+  const statMovesEl = document.getElementById('statMoves');
+  const statGateAIEl = document.getElementById('statGateAI');
+  const btnPause = document.getElementById('btnPause');
+  const btnSpeed = document.getElementById('btnSpeed');
+  const btnFault = document.getElementById('btnFault');
+  const btnWeather = document.getElementById('btnWeather');
+  const btnMaint = document.getElementById('btnMaint');
+  const nodeGateStatusEl = document.getElementById('nodeGateStatus');
+  const nodePredictStatusEl = document.getElementById('nodePredictStatus');
+  const nodeSwarmStatusEl = document.getElementById('nodeSwarmStatus');
+  const nodeCarbonStatusEl = document.getElementById('nodeCarbonStatus');
+  const cyclePredictEl = document.getElementById('cyclePredict');
+  const cycleOptimizeEl = document.getElementById('cycleOptimize');
+  const cycleExecuteEl = document.getElementById('cycleExecute');
+  const paramFlightEl = document.getElementById('paramFlight');
+  const paramGateEl = document.getElementById('paramGate');
+  const paramWeatherEl = document.getElementById('paramWeather');
+  const paramTrafficEl = document.getElementById('paramTraffic');
+  const paramMaintEl = document.getElementById('paramMaint');
+
+  const state = SimCore.createState();
+  let paused = false;
+  let speedMultiplier = 1;
+  let renderedLogCount = 0;
+
+  function flushLog(){
+    while (renderedLogCount < state.events.length){
+      const ev = state.events[renderedLogCount];
+      const el = document.createElement('div');
+      el.className = 'log-entry log-entry--' + ev.color;
+      el.innerHTML = '<span class="log-msg">'+ev.msg+'</span><span class="log-time">'+SimCore.formatClock(ev.time)+'</span>';
+      logListEl.insertBefore(el, logListEl.firstChild);
+      renderedLogCount++;
+    }
+    while (logListEl.children.length > 40){ logListEl.removeChild(logListEl.lastChild); }
+  }
+
+  let statThrottle = 0, forecastThrottle = 0;
+  function updateUI(dt){
+    flushLog();
+    statThrottle += dt;
+    if (statThrottle > 0.15){
+      statThrottle = 0;
+      simClockEl.textContent = SimCore.formatClock(state.simMinutes);
+      statCarbonEl.textContent = state.carbonSaved.toFixed(1) + ' kg';
+      statOTPEl.textContent = Math.round(state.displayOTP) + '%';
+      const activeMoves = state.vehicles.filter(v => v.state==='moving'||v.state==='working'||v.state==='working-departure').length;
+      statMovesEl.textContent = String(activeMoves);
+      const electricActive = state.vehicles.filter(v => v.fuel==='electric' && v.state!=='fault').length;
+      statFleetEl.textContent = electricActive + '/' + state.vehicles.length;
+      statGateAIEl.textContent = String(state.gateReassignments);
+      replanBadgeEl.classList.toggle('visible', state.weatherActive);
+
+      /* -- predictive engine parameter readouts (feeds the Predict/Optimize/Execute cycle) -- */
+      const openGates = state.gates.filter(g => !g.maintenance).length;
+      const maintGate = state.gates.find(g => g.maintenance);
+      const onTime = state.displayOTP >= 96;
+      paramFlightEl.textContent = onTime ? 'on-time' : Math.round(100-state.displayOTP)+'% at risk';
+      paramFlightEl.className = 'param-val ' + (onTime ? 'ok' : 'warn');
+      paramGateEl.textContent = openGates + '/' + state.gates.length + ' open';
+      paramGateEl.className = 'param-val ' + (openGates < state.gates.length ? 'warn' : 'ok');
+      paramWeatherEl.textContent = state.weatherActive ? 'storm cell — replanning' : 'clear';
+      paramWeatherEl.className = 'param-val ' + (state.weatherActive ? 'warn' : 'ok');
+      const activeMovesNow = state.vehicles.filter(v=>v.state==='moving'||v.state==='working'||v.state==='working-departure').length;
+      const trafficPct = Math.round((activeMovesNow/8)*100);
+      paramTrafficEl.textContent = trafficPct + '% taxiway load';
+      paramTrafficEl.className = 'param-val ' + (trafficPct > 50 ? 'warn' : 'ok');
+      paramMaintEl.textContent = maintGate ? ('gate '+maintGate.label+' closed ~'+Math.max(0,Math.ceil(maintGate.maintenanceUntil-state.elapsed))+'s') : 'none scheduled';
+      paramMaintEl.className = 'param-val ' + (maintGate ? 'warn' : 'ok');
+
+      const phase = Math.floor(state.elapsed / 2.4) % 3;
+      cyclePredictEl.classList.toggle('active', phase === 0);
+      cycleOptimizeEl.classList.toggle('active', phase === 1);
+      cycleExecuteEl.classList.toggle('active', phase === 2);
+
+      nodeGateStatusEl.innerHTML = '<span class="dot2"></span>' + (maintGate ? 'REROUTING' : 'NOMINAL');
+      nodePredictStatusEl.innerHTML = '<span class="dot2"></span>' + (state.weatherActive ? 'REPLANNING' : 'MONITORING');
+      const anyFault = state.vehicles.some(v => v.state === 'fault');
+      nodeSwarmStatusEl.innerHTML = '<span class="dot2"></span>' + (anyFault ? 'SELF-HEALING' : 'NOMINAL');
+      nodeCarbonStatusEl.innerHTML = '<span class="dot2"></span>ACTIVE';
+    }
+    forecastThrottle += dt;
+    if (forecastThrottle > 0.5){
+      forecastThrottle = 0;
+      const items = SimCore.getForecast(state);
+      if (items.length === 0){
+        forecastListEl.innerHTML = '<div class="forecast-empty">No predicted events in window</div>';
+      } else {
+        forecastListEl.innerHTML = items.slice(0,3).map(it =>
+          '<div class="forecast-item"><span>'+it.label+'</span><span class="forecast-eta">~'+Math.ceil(it.eta)+'s</span></div>'
+        ).join('');
+      }
+    }
+  }
+
+  btnPause.addEventListener('click', () => {
+    paused = !paused;
+    btnPause.textContent = paused ? 'RESUME' : 'PAUSE';
+  });
+  btnSpeed.addEventListener('click', () => {
+    speedMultiplier = speedMultiplier === 1 ? 2 : 1;
+    btnSpeed.textContent = 'SPEED · ' + speedMultiplier + '×';
+  });
+  btnFault.addEventListener('click', () => SimCore.triggerFailure(state));
+  btnWeather.addEventListener('click', () => SimCore.triggerWeather(state));
+  btnMaint.addEventListener('click', () => SimCore.triggerMaintenance(state));
+
+  state.log('AEROS online — gate AI, predictive engine, swarm fleet and carbon engine unified and nominal', 'electric');
+
+  /* =========================================================================
+     PART 3 — 3D RENDERING LAYER (Three.js). Degrades gracefully if unavailable.
+     ========================================================================= */
+  function initFallback(){
+    const div = document.createElement('div');
+    div.className = 'webgl-fallback';
+    div.textContent = '3D renderer unavailable in this preview environment — the simulation is still running below.';
+    mapPanelEl.appendChild(div);
+  }
+
+  function init3D(){
+    const COLORS = { white:0xFFFFFF, lightBlue:0x93C5FD, slate:0x64748B, alert:0xFF3B7A, amber:0xF5A623,
+                      voidC:0x0B1121, panel:0x151F38, blue:0x2563EB };
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(COLORS.voidC);
+    scene.fog = new THREE.Fog(COLORS.voidC, 170, 430);
+
+    const camera = new THREE.PerspectiveCamera(46, 1.6, 1, 1000);
+    const camTarget = new THREE.Vector3(-6, 6, 4);
+    const camSpherical = new THREE.Spherical(215, Math.PI*0.36, Math.PI*0.12);
+    function applyCamera(){
+      const offset = new THREE.Vector3().setFromSpherical(camSpherical);
+      camera.position.copy(camTarget).add(offset);
+      camera.lookAt(camTarget);
+    }
+    applyCamera();
+
+    const isNarrow = window.innerWidth < 700;
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    function onResize(){
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      if (w < 2 || h < 2) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', onResize);
+
+    /* ---- lighting ---- */
+    scene.add(new THREE.AmbientLight(COLORS.blue, 0.6));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
+    dirLight.position.set(90, 150, 70);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(isNarrow?1024:2048, isNarrow?1024:2048);
+    dirLight.shadow.camera.left = -150; dirLight.shadow.camera.right = 150;
+    dirLight.shadow.camera.top = 150; dirLight.shadow.camera.bottom = -150;
+    dirLight.shadow.camera.far = 400;
+    scene.add(dirLight);
+    const fillLight = new THREE.PointLight(COLORS.lightBlue, 0.5, 320);
+    fillLight.position.set(-70, 55, 20);
+    scene.add(fillLight);
+
+    /* ---- ground + grid ---- */
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(380, 280),
+      new THREE.MeshStandardMaterial({ color: 0x151F38, roughness: 0.95, metalness: 0.05 })
+    );
+    ground.rotation.x = -Math.PI/2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const grid = new THREE.GridHelper(380, 38, COLORS.blue, 0x1E2D4F);
+    grid.position.y = 0.03;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.35;
+    scene.add(grid);
+
+    /* ---- holographic box helper ---- */
+    function holoBox(w,h,d,fillColor,edgeColor,opacity){
+      const group = new THREE.Group();
+      const geo = new THREE.BoxGeometry(w,h,d);
+      const fillMat = new THREE.MeshStandardMaterial({ color: fillColor, transparent:true, opacity: opacity, roughness:0.55, metalness:0.15 });
+      const mesh = new THREE.Mesh(geo, fillMat);
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      group.add(mesh);
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: edgeColor }));
+      group.add(edges);
+      return group;
+    }
+
+    const terminal = holoBox(150, 16, 20, COLORS.panel, COLORS.white, 0.6);
+    terminal.position.set(0, 8, -60);
+    scene.add(terminal);
+
+    const tower = holoBox(9, 36, 9, COLORS.panel, COLORS.lightBlue, 0.55);
+    tower.position.set(-64, 18, -60);
+    scene.add(tower);
+
+    /* ---- gate pads + piers ---- */
+    const gateVisuals = SimCore.GATE_DEFS.map(g => {
+      const pier = new THREE.Mesh(
+        new THREE.BoxGeometry(3.2, 0.4, 13),
+        new THREE.MeshStandardMaterial({ color: COLORS.panel, transparent:true, opacity:0.55 })
+      );
+      pier.position.set(g.pos.x, 0.15, g.pos.z - 6.5);
+      pier.receiveShadow = true;
+      scene.add(pier);
+
+      const padMat = new THREE.MeshBasicMaterial({ color: COLORS.lightBlue, transparent:true, opacity:0.5, side:THREE.DoubleSide });
+      const pad = new THREE.Mesh(new THREE.RingGeometry(4.4, 5.2, 32), padMat);
+      pad.rotation.x = -Math.PI/2;
+      pad.position.set(g.pos.x, 0.06, g.pos.z);
+      scene.add(pad);
+
+      return { def: g, padMat };
+    });
+
+    /* ---- runway ---- */
+    function runwayTexture(){
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 128;
+      const cx = c.getContext('2d');
+      cx.fillStyle = '#0B1121'; cx.fillRect(0,0,c.width,c.height);
+      cx.strokeStyle = 'rgba(255,255,255,0.5)';
+      cx.setLineDash([42,28]); cx.lineWidth = 6;
+      cx.beginPath(); cx.moveTo(0,64); cx.lineTo(1024,64); cx.stroke();
+      return new THREE.CanvasTexture(c);
+    }
+    const runway = new THREE.Mesh(
+      new THREE.PlaneGeometry(230, 28),
+      new THREE.MeshStandardMaterial({ map: runwayTexture(), roughness: 0.9 })
+    );
+    runway.rotation.x = -Math.PI/2;
+    runway.position.set(0, 0.02, 82);
+    runway.receiveShadow = true;
+    scene.add(runway);
+
+    /* ---- hub platform ---- */
+    const hubGeo = new THREE.CylinderGeometry(26, 26, 1.1, 6);
+    const hub = new THREE.Mesh(hubGeo, new THREE.MeshStandardMaterial({ color: COLORS.panel, transparent:true, opacity:0.65 }));
+    hub.position.set(-85, 0.55, 24);
+    hub.receiveShadow = true;
+    scene.add(hub);
+    const hubEdges = new THREE.LineSegments(new THREE.EdgesGeometry(hubGeo), new THREE.LineBasicMaterial({ color: COLORS.lightBlue }));
+    hubEdges.position.copy(hub.position);
+    scene.add(hubEdges);
+    SimCore.HUB_SLOTS.forEach(slot => {
+      const mark = new THREE.Mesh(new THREE.RingGeometry(1.3,1.7,20), new THREE.MeshBasicMaterial({ color: COLORS.white, transparent:true, opacity:0.3, side:THREE.DoubleSide }));
+      mark.rotation.x = -Math.PI/2;
+      mark.position.set(slot.x, 1.15, slot.z);
+      scene.add(mark);
+    });
+
+    /* ---- aircraft models (one per gate, reused for the lifetime of the page) ---- */
+    function buildAircraft(){
+      const group = new THREE.Group();
+      const fillMat = new THREE.MeshStandardMaterial({ color: COLORS.white, transparent:true, opacity:0.5, roughness:0.3, metalness:0.2 });
+      const edgeMat = new THREE.LineBasicMaterial({ color: COLORS.white, transparent:true, opacity:0.9 });
+
+      const fuse = new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,10,10), fillMat);
+      fuse.rotation.z = Math.PI/2; fuse.castShadow = true;
+      fuse.add(new THREE.LineSegments(new THREE.EdgesGeometry(fuse.geometry), edgeMat));
+      group.add(fuse);
+
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(1.1,3,10), fillMat);
+      nose.rotation.z = -Math.PI/2; nose.position.x = 6.5; nose.castShadow = true;
+      nose.add(new THREE.LineSegments(new THREE.EdgesGeometry(nose.geometry), edgeMat));
+      group.add(nose);
+
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(3,0.25,13), fillMat);
+      wing.position.set(-0.5,0,0); wing.castShadow = true;
+      wing.add(new THREE.LineSegments(new THREE.EdgesGeometry(wing.geometry), edgeMat));
+      group.add(wing);
+
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(2,3.2,0.3), fillMat);
+      tail.position.set(-4.5,1.6,0); tail.castShadow = true;
+      tail.add(new THREE.LineSegments(new THREE.EdgesGeometry(tail.geometry), edgeMat));
+      group.add(tail);
+
+      group.rotation.y = Math.PI/2;
+      return { group, fillMat, edgeMat };
+    }
+    const aircraftVisuals = SimCore.GATE_DEFS.map(() => {
+      const a = buildAircraft();
+      a.group.position.y = 4.6;
+      scene.add(a.group);
+      return a;
+    });
+
+    /* ---- vehicle models (one per vehicle def, reused) ---- */
+    function buildVehicle(kind){
+      const group = new THREE.Group();
+      const dims = {
+        tug:      { w: 3.6, h: 2.0, d: 5.2 },
+        baggage:  { w: 2.8, h: 1.6, d: 3.6 },
+        catering: { w: 3.2, h: 2.0, d: 6.2 },
+        fuel:     { w: 3.0, h: 1.7, d: 6.6 }
+      }[kind] || { w: 2.8, h: 1.6, d: 3.6 };
+      const bodyW = dims.w, bodyH = dims.h, bodyD = dims.d;
+      const fillMat = new THREE.MeshStandardMaterial({ color: COLORS.white, transparent:true, opacity:0.5, roughness:0.35, metalness:0.3 });
+      const edgeMat = new THREE.LineBasicMaterial({ color: COLORS.white });
+      const bodyGeo = new THREE.BoxGeometry(bodyW,bodyH,bodyD);
+      const body = new THREE.Mesh(bodyGeo, fillMat);
+      body.position.y = bodyH/2; body.castShadow = true;
+      group.add(body);
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(bodyGeo), edgeMat);
+      edges.position.copy(body.position);
+      group.add(edges);
+
+      if (kind === 'tug'){
+        // low pushback tractor with a compact driver cab
+        const cabGeo = new THREE.BoxGeometry(bodyW*0.65,1.3,1.8);
+        const cab = new THREE.Mesh(cabGeo, fillMat);
+        cab.position.set(0, bodyH+0.65, bodyD*0.2); cab.castShadow = true;
+        group.add(cab);
+        const cabEdges = new THREE.LineSegments(new THREE.EdgesGeometry(cabGeo), edgeMat);
+        cabEdges.position.copy(cab.position);
+        group.add(cabEdges);
+      } else if (kind === 'catering'){
+        // catering truck: elevating service box mounted high at the rear
+        const liftGeo = new THREE.BoxGeometry(bodyW*0.82, 2.1, bodyD*0.36);
+        const lift = new THREE.Mesh(liftGeo, fillMat);
+        lift.position.set(0, bodyH+1.05, bodyD*0.22); lift.castShadow = true;
+        group.add(lift);
+        const liftEdges = new THREE.LineSegments(new THREE.EdgesGeometry(liftGeo), edgeMat);
+        liftEdges.position.copy(lift.position);
+        group.add(liftEdges);
+        const armGeo = new THREE.BoxGeometry(0.55, bodyH+0.9, 0.55);
+        const arm = new THREE.Mesh(armGeo, fillMat);
+        arm.position.set(0, (bodyH+2.1)/2, bodyD*0.02); arm.castShadow = true;
+        group.add(arm);
+      } else if (kind === 'fuel'){
+        // fuel truck: cylindrical tank riding on the flatbed
+        const tankGeo = new THREE.CylinderGeometry(1.35, 1.35, bodyD*0.82, 14);
+        const tank = new THREE.Mesh(tankGeo, fillMat);
+        tank.rotation.z = Math.PI/2;
+        tank.position.set(0, bodyH+1.35, -bodyD*0.03); tank.castShadow = true;
+        group.add(tank);
+        const tankEdges = new THREE.LineSegments(new THREE.EdgesGeometry(tankGeo), edgeMat);
+        tankEdges.rotation.z = Math.PI/2;
+        tankEdges.position.copy(tank.position);
+        group.add(tankEdges);
+      }
+      // baggage tractors stay a plain low flatbed — no add-on needed
+
+      const lightMat = new THREE.MeshBasicMaterial({ color: COLORS.white });
+      const light = new THREE.Mesh(new THREE.SphereGeometry(0.42,10,10), lightMat);
+      const beaconH = (kind==='tug' || kind==='catering') ? 1.5 : (kind==='fuel' ? 1.1 : 0.5);
+      light.position.set(0, bodyH + beaconH, -bodyD*0.32);
+      group.add(light);
+
+      const highlightMat = new THREE.MeshBasicMaterial({ color: COLORS.lightBlue, transparent:true, opacity:0, side: THREE.DoubleSide });
+      const highlight = new THREE.Mesh(new THREE.RingGeometry(bodyD*0.55, bodyD*0.7, 28), highlightMat);
+      highlight.rotation.x = -Math.PI/2;
+      highlight.position.y = 0.07;
+      group.add(highlight);
+
+      return { group, fillMat, edgeMat, lightMat, highlightMat };
+    }
+    const vehicleVisuals = SimCore.VEHICLE_DEFS.map(v => {
+      const vis = buildVehicle(v.kind);
+      scene.add(vis.group);
+      return vis;
+    });
+
+    /* ---- predictive ghost previews: one slot per gate per service type ---- */
+    const previewPool = [];
+    SimCore.GATE_DEFS.forEach(() => {
+      SimCore.SERVICE_DEFS.forEach(() => {
+        const ringMat = new THREE.MeshBasicMaterial({ color: COLORS.lightBlue, transparent:true, opacity:0, side:THREE.DoubleSide });
+        const ring = new THREE.Mesh(new THREE.RingGeometry(2.2,2.9,26), ringMat);
+        ring.rotation.x = -Math.PI/2;
+        scene.add(ring);
+        const lineMat = new THREE.LineBasicMaterial({ color: COLORS.lightBlue, transparent:true, opacity:0 });
+        const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+        const line = new THREE.Line(lineGeo, lineMat);
+        scene.add(line);
+        previewPool.push({ ring, ringMat, line, lineMat, visible:false });
+      });
+    });
+
+    /* ---- rain ---- */
+    const RAIN_COUNT = 240;
+    const rainPositions = new Float32Array(RAIN_COUNT*3);
+    for (let i=0;i<RAIN_COUNT;i++){
+      rainPositions[i*3] = (Math.random()-0.5)*320;
+      rainPositions[i*3+1] = Math.random()*90+10;
+      rainPositions[i*3+2] = (Math.random()-0.5)*240;
+    }
+    const rainGeo = new THREE.BufferGeometry();
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions,3));
+    const rainMat = new THREE.PointsMaterial({ color: COLORS.lightBlue, size:1.2, transparent:true, opacity:0, sizeAttenuation:true });
+    const rain = new THREE.Points(rainGeo, rainMat);
+    scene.add(rain);
+
+    /* ---- transient effect pool (dispatch beams, fault bursts, reroute beams) ---- */
+    const activeEffects = new Map();
+    function spawnEffect(e){
+      if (e.type === 'dispatchBeam' || e.type === 'rerouteBeam'){
+        const color = e.type === 'rerouteBeam' ? (e.color === 'gate' ? COLORS.amber : COLORS.alert) : (e.color === 'electric' ? COLORS.white : COLORS.slate);
+        const mat = new THREE.LineBasicMaterial({ color: color, transparent:true, opacity:0.85 });
+        const geo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(e.fromX, 1.2, e.fromZ), new THREE.Vector3(e.toX, 1.2, e.toZ)
+        ]);
+        const line = new THREE.Line(geo, mat);
+        scene.add(line);
+        const pulseMat = new THREE.MeshBasicMaterial({ color: color });
+        const pulse = new THREE.Mesh(new THREE.SphereGeometry(0.7,10,10), pulseMat);
+        scene.add(pulse);
+        return { kind:e.type, line, mat, pulse, pulseMat, from:{x:e.fromX,z:e.fromZ}, to:{x:e.toX,z:e.toZ} };
+      }
+      if (e.type === 'faultBurst'){
+        const ringMat = new THREE.MeshBasicMaterial({ color: COLORS.alert, transparent:true, opacity:0.8, side:THREE.DoubleSide });
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.6,1.1,28), ringMat);
+        ring.rotation.x = -Math.PI/2;
+        ring.position.set(e.x, 0.3, e.z);
+        scene.add(ring);
+
+        const n = 12;
+        const positions = new Float32Array(n*3);
+        const velocities = [];
+        for (let i=0;i<n;i++){
+          positions[i*3]=e.x; positions[i*3+1]=1.4; positions[i*3+2]=e.z;
+          const ang = Math.random()*Math.PI*2;
+          const spd = 6 + Math.random()*8;
+          velocities.push({ vx: Math.cos(ang)*spd, vy: 4+Math.random()*5, vz: Math.sin(ang)*spd });
+        }
+        const pGeo = new THREE.BufferGeometry();
+        pGeo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+        const pMat = new THREE.PointsMaterial({ color: COLORS.alert, size:0.9, transparent:true, opacity:0.9 });
+        const particles = new THREE.Points(pGeo, pMat);
+        scene.add(particles);
+
+        return { kind:e.type, ring, ringMat, particles, pMat, velocities, origin:{x:e.x,z:e.z} };
+      }
+      return null;
+    }
+    function animateEffect(handle, age){
+      if (!handle) return;
+      if (handle.kind === 'dispatchBeam' || handle.kind === 'rerouteBeam'){
+        const life = 1.1;
+        const p = Math.min(1, age/life);
+        handle.mat.opacity = 0.85*(1-p);
+        const px = lerpN(handle.from.x, handle.to.x, Math.min(1, age/0.6));
+        const pz = lerpN(handle.from.z, handle.to.z, Math.min(1, age/0.6));
+        handle.pulse.position.set(px, 1.2, pz);
+        handle.pulseMat.opacity = 1-p;
+        handle.pulse.visible = age < 0.65;
+      } else if (handle.kind === 'faultBurst'){
+        const p = Math.min(1, age/0.85);
+        handle.ring.scale.setScalar(1 + p*9);
+        handle.ringMat.opacity = 0.8*(1-p);
+        const posAttr = handle.particles.geometry.attributes.position;
+        for (let i=0;i<handle.velocities.length;i++){
+          const v = handle.velocities[i];
+          posAttr.array[i*3] = handle.origin.x + v.vx*age;
+          posAttr.array[i*3+1] = 1.4 + v.vy*age - 9*age*age;
+          posAttr.array[i*3+2] = handle.origin.z + v.vz*age;
+        }
+        posAttr.needsUpdate = true;
+        handle.pMat.opacity = Math.max(0, 0.9*(1 - age/0.7));
+      }
+    }
+    function disposeEffect(handle){
+      if (!handle) return;
+      if (handle.line){ scene.remove(handle.line); handle.line.geometry.dispose(); handle.mat.dispose(); }
+      if (handle.pulse){ scene.remove(handle.pulse); handle.pulse.geometry.dispose(); handle.pulseMat.dispose(); }
+      if (handle.ring){ scene.remove(handle.ring); handle.ring.geometry.dispose(); handle.ringMat.dispose(); }
+      if (handle.particles){ scene.remove(handle.particles); handle.particles.geometry.dispose(); handle.pMat.dispose(); }
+    }
+    function lerpN(a,b,t){ return a+(b-a)*t; }
+
+    /* ---- camera orbit controls (hand-rolled, no extra dependency) ---- */
+    let dragging = false, lastX=0, lastY=0;
+    canvas.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; try{canvas.setPointerCapture(e.pointerId);}catch(_){} });
+    window.addEventListener('pointerup', () => { dragging = false; });
+    canvas.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      camSpherical.theta -= dx*0.006;
+      camSpherical.phi = Math.max(0.18, Math.min(1.3, camSpherical.phi - dy*0.005));
+      applyCamera();
+    });
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      camSpherical.radius = Math.max(110, Math.min(340, camSpherical.radius + e.deltaY*0.15));
+      applyCamera();
+    }, { passive:false });
+
+    /* ---- gate HTML label overlays ---- */
+    const gateLabelEls = SimCore.GATE_DEFS.map(g => {
+      const el = document.createElement('div');
+      el.className = 'gate-label';
+      el.innerHTML = '<span class="code">'+g.label+'</span>';
+      sceneLabelsEl.appendChild(el);
+      return el;
+    });
+    const projVec = new THREE.Vector3();
+    function projectToScreen(x,y,z){
+      projVec.set(x,y,z).project(camera);
+      return {
+        x: (projVec.x*0.5+0.5) * canvas.clientWidth,
+        y: (1-(projVec.y*0.5+0.5)) * canvas.clientHeight,
+        behind: projVec.z > 1
+      };
+    }
+
+    /* ---- sync loop: pure sim state -> three.js objects ---- */
+    function syncScene(){
+      // gates: pad glow reflects urgency
+      gateVisuals.forEach((gv,i) => {
+        const g = state.gates[i];
+        if (g.maintenance){
+          const flicker = 0.4 + 0.3*Math.sin(state.elapsed*3.2);
+          gv.padMat.opacity = flicker;
+          gv.padMat.color.setHex(COLORS.amber);
+          return;
+        }
+        const urgent = g.state === 'parked' && (!g.baggageDispatched || !g.pushbackDispatched);
+        gv.padMat.opacity = urgent ? 0.75 : 0.35;
+        gv.padMat.color.setHex(urgent ? COLORS.white : COLORS.lightBlue);
+      });
+
+      // aircraft
+      aircraftVisuals.forEach((av,i) => {
+        const g = state.gates[i];
+        av.group.position.x = g.aircraft.x;
+        av.group.position.z = g.aircraft.z;
+        av.group.visible = g.aircraft.opacity > 0.02;
+        av.fillMat.opacity = 0.5 * g.aircraft.opacity;
+        av.edgeMat.opacity = 0.9 * g.aircraft.opacity;
+      });
+
+      // vehicles
+      vehicleVisuals.forEach((vv,i) => {
+        const v = state.vehicles[i];
+        vv.group.position.set(v.x, 0, v.z);
+        if (v.state==='moving' || v.state==='returning' || v.state==='working-departure'){
+          const dx = v.targetX - v.x, dz = v.targetZ - v.z;
+          if (Math.hypot(dx,dz) > 0.25) vv.group.rotation.y = Math.atan2(dx,dz);
+        }
+        let color = COLORS.white;
+        if (v.state === 'fault'){
+          const flicker = Math.floor(state.elapsed*14) % 2 === 0;
+          color = flicker ? COLORS.alert : COLORS.slate;
+        } else {
+          color = v.fuel === 'electric' ? COLORS.white : COLORS.slate;
+        }
+        vv.fillMat.color.setHex(color);
+        vv.edgeMat.color.setHex(color);
+        vv.lightMat.color.setHex(v.state==='fault' ? COLORS.alert : color);
+        vv.fillMat.opacity = v.state==='idle' ? 0.4 : 0.68;
+        vv.highlightMat.opacity *= 0.9; // decay unless refreshed by preview sync below
+      });
+
+      // predictive ghost previews (also drives vehicle highlight rings)
+      let poolIdx = 0;
+      state.gates.forEach((g,i) => {
+        SimCore.SERVICE_DEFS.forEach(svc => {
+          const type = svc.type;
+          const slot = previewPool[poolIdx++];
+          const dispatchedFlag = g.dispatched[type];
+          const show = g.state==='parked' && g.previewShown[type] && !dispatchedFlag;
+          if (show){
+            const candidate = SimCore.previewDispatch(state, type, g);
+            const targetX = g.pos.x + svc.dx;
+            const targetZ = g.pos.z + svc.dz;
+            slot.ring.position.set(targetX, 0.12, targetZ);
+            const pulse = 0.3 + 0.28*Math.sin(state.elapsed*4.2);
+            slot.ringMat.opacity = pulse;
+            if (candidate){
+              slot.line.geometry.setFromPoints([
+                new THREE.Vector3(candidate.home.x, 0.5, candidate.home.z),
+                new THREE.Vector3(targetX, 0.5, targetZ)
+              ]);
+              slot.lineMat.opacity = 0.3;
+              const vi = SimCore.VEHICLE_DEFS.findIndex(function(d){ return d.id===candidate.id; });
+              if (vi >= 0){ vehicleVisuals[vi].highlightMat.opacity = 0.55; }
+            } else {
+              slot.lineMat.opacity = 0;
+            }
+          } else {
+            slot.ringMat.opacity = 0;
+            slot.lineMat.opacity = 0;
+          }
+        });
+      });
+
+      // transient effects
+      const currentIds = new Set(state.effects.map(e => e.id));
+      activeEffects.forEach((handle, id) => {
+        if (!currentIds.has(id)){ disposeEffect(handle); activeEffects.delete(id); }
+      });
+      state.effects.forEach(e => {
+        if (!activeEffects.has(e.id)){
+          const h = spawnEffect(e);
+          if (h) activeEffects.set(e.id, h);
+        }
+        const handle = activeEffects.get(e.id);
+        animateEffect(handle, state.elapsed - e.t0);
+      });
+
+      // weather atmosphere
+      const active = state.weatherActive;
+      const targetNear = active ? 60 : 170, targetFar = active ? 210 : 430;
+      scene.fog.near += (targetNear - scene.fog.near) * 0.03;
+      scene.fog.far += (targetFar - scene.fog.far) * 0.03;
+      const targetDirI = active ? 0.5 : 0.95;
+      dirLight.intensity += (targetDirI - dirLight.intensity) * 0.04;
+      const rainPos = rainGeo.attributes.position.array;
+      for (let i=0;i<RAIN_COUNT;i++){
+        rainPos[i*3+1] -= active ? 2.4 : 0;
+        if (rainPos[i*3+1] < 0) rainPos[i*3+1] = 90 + Math.random()*20;
+      }
+      rainGeo.attributes.position.needsUpdate = true;
+      rainMat.opacity += ((active?0.8:0) - rainMat.opacity) * 0.06;
+
+      // gate label overlays (projected)
+      gateLabelEls.forEach((el,i) => {
+        const g = state.gates[i];
+        const p = projectToScreen(g.pos.x, 11, g.pos.z);
+        if (p.behind){ el.style.opacity = '0'; return; }
+        el.style.left = p.x + 'px';
+        el.style.top = p.y + 'px';
+        el.style.opacity = '1';
+        if (g.maintenance){
+          el.innerHTML = '<span class="code">'+g.label+'</span><span class="maint">MAINT</span>';
+          return;
+        }
+        const items = SimCore.getForecast(state).filter(function(it){ return it.label.indexOf(g.label) === 0; });
+        if (items.length){
+          el.innerHTML = '<span class="code">'+g.label+'</span><span class="predict">~'+Math.ceil(items[0].eta)+'s</span>';
+        } else {
+          el.innerHTML = '<span class="code">'+g.label+'</span>';
+        }
+      });
+    }
+
+    /* ---- main render loop ---- */
+    let lastTs = null;
+    function frame(ts){
+      if (lastTs === null) lastTs = ts;
+      let dt = (ts - lastTs) / 1000;
+      lastTs = ts;
+      dt = Math.min(dt, 0.05);
+      if (!paused){ SimCore.tick(state, dt * speedMultiplier, speedMultiplier); }
+      syncScene();
+      updateUI(dt);
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+    onResize();
+    requestAnimationFrame(frame);
+  }
+
+  if (typeof THREE === 'undefined'){
+    initFallback();
+    // keep the simulation + UI (log/stats/forecast) alive even without 3D
+    let lastTs = null;
+    function frameNoGL(ts){
+      if (lastTs === null) lastTs = ts;
+      let dt = (ts - lastTs)/1000; lastTs = ts; dt = Math.min(dt,0.05);
+      if (!paused){ SimCore.tick(state, dt*speedMultiplier, speedMultiplier); }
+      updateUI(dt);
+      requestAnimationFrame(frameNoGL);
+    }
+    requestAnimationFrame(frameNoGL);
+  } else {
+    init3D();
+  }
+})();
+</script>
+</body>
+</html>
