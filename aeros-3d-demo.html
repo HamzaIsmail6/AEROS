@@ -26,7 +26,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--void);color:var(--ink);font-family:'JetBrains Mono',monospace;}
   body{padding:18px;}
-  .app-shell{max-width:1220px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+  .app-shell{max-width:1440px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
 
   .header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;
     border-bottom:1px solid var(--line);padding-bottom:14px;}
@@ -52,20 +52,22 @@
   .node-status{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:0.08em;color:var(--node-color, var(--light-blue));margin-top:1px;}
   .node-status .dot2{width:5px;height:5px;border-radius:50%;background:var(--node-color, var(--light-blue));
     box-shadow:0 0 6px var(--node-color, var(--light-blue));animation:pulse 1.8s ease-in-out infinite;}
-  .brain-note{font-size:10.5px;color:var(--ink-dim);line-height:1.6;padding:2px 2px 0;}
+
+  .info-row{display:flex;gap:16px;align-items:center;}
+  .brain-note{font-size:10.5px;color:var(--ink-dim);line-height:1.6;padding:2px 2px 0;flex:1.3;min-width:0;}
   .brain-note b{color:var(--light-blue);font-weight:600;}
 
-  .stats-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+  .stats-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;flex:1;min-width:0;}
   .stat-card{background:linear-gradient(160deg, var(--panel), var(--panel2));border:1px solid var(--line);
-    border-radius:10px;padding:13px 15px;}
-  .stat-value{font-family:'Sora',sans-serif;font-size:24px;font-weight:700;color:var(--white);line-height:1.1;}
-  .stat-label{font-size:10px;letter-spacing:0.09em;color:var(--ink-dim);margin-top:5px;}
+    border-radius:9px;padding:8px 10px;display:flex;flex-direction:column;justify-content:center;}
+  .stat-value{font-family:'Sora',sans-serif;font-size:17px;font-weight:700;color:var(--white);line-height:1.1;}
+  .stat-label{font-size:8px;letter-spacing:0.06em;color:var(--ink-dim);margin-top:3px;line-height:1.3;}
 
-  .main-grid{display:grid;grid-template-columns:2.15fr 1fr;gap:12px;align-items:stretch;}
+  .main-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:12px;align-items:stretch;}
   .map-panel{position:relative;background:radial-gradient(ellipse at 50% 20%, #1A2952, var(--void));
     border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:grab;}
   .map-panel:active{cursor:grabbing;}
-  canvas{display:block;width:100%;height:auto;aspect-ratio:16/10;touch-action:none;}
+  canvas{display:block;width:100%;height:auto;aspect-ratio:2/1;touch-action:none;}
 
   .scene-labels{position:absolute;inset:0;pointer-events:none;}
   .gate-label{position:absolute;transform:translate(-50%,-100%);pointer-events:none;
@@ -75,16 +77,6 @@
   .gate-label .predict{display:block;margin-top:3px;color:var(--light-blue);background:rgba(37,99,235,0.18);
     border:1px solid rgba(147,197,253,0.4);border-radius:4px;padding:2px 6px;font-size:9.5px;}
 
-  .legend{position:absolute;top:12px;left:12px;background:rgba(11,17,33,0.82);border:1px solid var(--line);
-    border-radius:8px;padding:9px 11px;font-size:10px;line-height:1.95;backdrop-filter:blur(2px);}
-  .legend-title{color:var(--ink-dim);letter-spacing:0.09em;margin-bottom:2px;font-size:9px;}
-  .legend-item{display:flex;align-items:center;gap:6px;color:var(--ink-dim);}
-  .chip{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;}
-  .chip.white{background:var(--white);box-shadow:0 0 5px var(--white);}
-  .chip.slate{background:var(--slate);}
-  .chip.light-blue{background:var(--light-blue);box-shadow:0 0 5px var(--light-blue);}
-  .chip.alert{background:var(--alert);box-shadow:0 0 5px var(--alert);}
-  .chip.amber{background:var(--amber);box-shadow:0 0 5px var(--amber);}
   .gate-label .maint{display:block;margin-top:3px;color:var(--amber);background:rgba(245,166,35,0.18);
     border:1px solid rgba(245,166,35,0.5);border-radius:4px;padding:2px 6px;font-size:9.5px;}
 
@@ -102,32 +94,33 @@
   .webgl-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     text-align:center;padding:30px;color:var(--ink-dim);font-size:12px;line-height:1.7;}
 
-  .sidebar{display:flex;flex-direction:column;gap:12px;min-height:0;}
+  .sidebar{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-height:0;align-items:stretch;}
+  .sidebar-col{display:flex;flex-direction:column;gap:12px;min-height:0;}
   .panel{background:linear-gradient(160deg, var(--panel), var(--panel2));border:1px solid var(--line);
-    border-radius:10px;padding:13px;display:flex;flex-direction:column;min-height:0;}
+    border-radius:10px;padding:10px;display:flex;flex-direction:column;min-height:0;}
   .panel-title{font-size:10px;letter-spacing:0.1em;color:var(--ink-dim);margin-bottom:9px;flex:none;}
-  .cycle-track{display:flex;gap:4px;margin-bottom:10px;flex:none;}
+  .cycle-track{display:flex;gap:4px;margin-bottom:6px;flex:none;}
   .cycle-step{flex:1;text-align:center;font-size:9px;letter-spacing:0.08em;padding:5px 2px;
     border-radius:6px;border:1px solid var(--line);color:var(--ink-dim);transition:all 0.25s ease;}
   .cycle-step.active{color:var(--void);background:var(--light-blue);border-color:var(--light-blue);font-weight:700;}
   .cycle-arrow{color:var(--ink-dim);font-size:9px;align-self:center;}
   .param-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
-    font-size:11px;padding:5px 0;border-bottom:1px dashed var(--line);}
+    font-size:11px;padding:3px 0;border-bottom:1px dashed var(--line);}
   .param-row:last-child{border-bottom:none;}
   .param-name{color:var(--ink-dim);flex:none;letter-spacing:0.03em;}
   .param-val{color:var(--light-blue);text-align:right;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .param-val.warn{color:var(--amber);}
   .param-val.ok{color:var(--green);}
   .predictive-panel{flex:none;}
-  .forecast-panel{flex:none;}
-  .forecast-item{font-size:11.5px;color:var(--light-blue);padding:5px 0;border-bottom:1px dashed var(--line);
+  .forecast-panel{flex:1;min-height:0;}
+  .forecast-item{font-size:11.5px;color:var(--light-blue);padding:3px 0;border-bottom:1px dashed var(--line);
     display:flex;justify-content:space-between;gap:8px;}
   .forecast-item span:first-child{flex:1;min-width:0;}
   .forecast-item:last-child{border-bottom:none;}
   .forecast-eta{color:var(--ink-dim);flex:none;}
   .forecast-empty{font-size:11px;color:var(--ink-dim);padding:4px 0;}
 
-  .log-panel{flex:none;height:320px;}
+  .log-panel{min-height:0;overflow:hidden;}
   .log-list{overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px;
     flex:1;min-height:0;}
   .log-entry{border-left:3px solid var(--light-blue);background:rgba(0,0,0,0.14);border-radius:5px;
@@ -155,11 +148,13 @@
 
   @media (max-width:900px){
     .main-grid{grid-template-columns:1fr;}
+    .sidebar{grid-template-columns:1fr;grid-template-rows:auto auto;height:auto;}
     .node-strip{grid-template-columns:repeat(2,1fr);}
-    .stats-strip{grid-template-columns:repeat(2,1fr);}
+    .info-row{flex-direction:column;gap:10px;}
+    .stats-strip{grid-template-columns:repeat(3,1fr);}
     .wordmark{font-size:28px;}
     .disclaimer{margin-left:0;width:100%;order:5;}
-    .log-panel{height:260px;}
+    .log-panel{height:220px;}
     .gate-label{font-size:9px;}
   }
 
@@ -185,7 +180,32 @@
     </div>
   </header>
 
-  <div class="brain-note">One node-connected intelligence, four subsystems: <b>Gate Scheduling AI</b>, the <b>Predictive Engine</b>, the <b>Swarm Fleet</b>, and the <b>Carbon Engine</b> act as extensions of a single decision-maker, not separate tools.</div>
+  <div class="info-row">
+    <div class="brain-note">One node-connected intelligence, four subsystems: <b>Gate Scheduling AI</b>, the <b>Predictive Engine</b>, the <b>Swarm Fleet</b>, and the <b>Carbon Engine</b> act as extensions of a single decision-maker, not separate tools.</div>
+
+    <section class="stats-strip">
+      <div class="stat-card">
+        <div class="stat-value" id="statCarbon">0.0 kg</div>
+        <div class="stat-label">CO₂ AVOIDED</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statOTP">100%</div>
+        <div class="stat-label">ON-TIME PERFORMANCE</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statFleet">6/8</div>
+        <div class="stat-label">ELECTRIC UNITS ON FLEET</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statMoves">0</div>
+        <div class="stat-label">ACTIVE MOVEMENTS</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statGateAI">0</div>
+        <div class="stat-label">GATE AI REASSIGNMENTS</div>
+      </div>
+    </section>
+  </div>
 
   <section class="node-strip">
     <div class="node-card" style="--node-color:var(--amber)">
@@ -210,64 +230,33 @@
     </div>
   </section>
 
-  <section class="stats-strip">
-    <div class="stat-card">
-      <div class="stat-value" id="statCarbon">0.0 kg</div>
-      <div class="stat-label">CO₂ AVOIDED</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" id="statOTP">100%</div>
-      <div class="stat-label">ON-TIME PERFORMANCE</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" id="statFleet">6/8</div>
-      <div class="stat-label">ELECTRIC UNITS ON FLEET</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" id="statMoves">0</div>
-      <div class="stat-label">ACTIVE MOVEMENTS</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" id="statGateAI">0</div>
-      <div class="stat-label">GATE AI REASSIGNMENTS</div>
-    </div>
-  </section>
-
   <section class="main-grid">
     <div class="map-panel" id="mapPanel">
       <canvas id="scene3d"></canvas>
       <div class="scene-labels" id="sceneLabels"></div>
-      <div class="legend">
-        <div class="legend-title">LEGEND</div>
-        <div class="legend-item"><span class="chip white"></span>Electric unit</div>
-        <div class="legend-item"><span class="chip slate"></span>Legacy unit</div>
-        <div class="legend-item"><span class="chip light-blue"></span>Predictive marker</div>
-        <div class="legend-item"><span class="chip alert"></span>Fault</div>
-        <div class="legend-item"><span class="chip amber"></span>Gate AI / maintenance</div>
-        <div class="legend-title" style="margin-top:5px;">FLEET ROLES</div>
-        <div style="color:var(--ink-dim);font-size:9px;">Tug · Baggage · Catering · Fuel</div>
-      </div>
       <div class="cam-hint">drag to orbit · scroll to zoom</div>
       <div class="replan-badge" id="replanBadge">REPLANNING</div>
     </div>
 
     <aside class="sidebar">
-      <div class="panel predictive-panel">
-        <div class="panel-title">PREDICTIVE ENGINE — PREDICT → OPTIMIZE → EXECUTE</div>
-        <div class="cycle-track">
-          <div class="cycle-step" id="cyclePredict">PREDICT</div>
-          <div class="cycle-step" id="cycleOptimize">OPTIMIZE</div>
-          <div class="cycle-step" id="cycleExecute">EXECUTE</div>
+      <div class="sidebar-col">
+        <div class="panel predictive-panel">
+          <div class="panel-title">PREDICTIVE ENGINE — PREDICT → OPTIMIZE → EXECUTE</div>
+          <div class="cycle-track">
+            <div class="cycle-step" id="cyclePredict">PREDICT</div>
+            <div class="cycle-step" id="cycleOptimize">OPTIMIZE</div>
+            <div class="cycle-step" id="cycleExecute">EXECUTE</div>
+          </div>
+          <div class="param-row"><span class="param-name">Flight schedule</span><span class="param-val" id="paramFlight">on-time</span></div>
+          <div class="param-row"><span class="param-name">Gate schedule</span><span class="param-val" id="paramGate">5/5 open</span></div>
+          <div class="param-row"><span class="param-name">Weather</span><span class="param-val" id="paramWeather">clear</span></div>
+          <div class="param-row"><span class="param-name">Taxiway traffic</span><span class="param-val" id="paramTraffic">low</span></div>
+          <div class="param-row"><span class="param-name">Maintenance</span><span class="param-val" id="paramMaint">none scheduled</span></div>
         </div>
-        <div class="param-row"><span class="param-name">Flight schedule</span><span class="param-val" id="paramFlight">on-time</span></div>
-        <div class="param-row"><span class="param-name">Gate schedule</span><span class="param-val" id="paramGate">5/5 open</span></div>
-        <div class="param-row"><span class="param-name">Weather</span><span class="param-val" id="paramWeather">clear</span></div>
-        <div class="param-row"><span class="param-name">Taxiway traffic</span><span class="param-val" id="paramTraffic">low</span></div>
-        <div class="param-row"><span class="param-name">Maintenance</span><span class="param-val" id="paramMaint">none scheduled</span></div>
-      </div>
-      <div class="panel forecast-panel">
-        <div class="panel-title">PREDICTED — NEXT 60S</div>
-        <div class="forecast-list" id="forecastList"></div>
+        <div class="panel forecast-panel">
+          <div class="panel-title">PREDICTED — NEXT 60S</div>
+          <div class="forecast-list" id="forecastList"></div>
+        </div>
       </div>
       <div class="panel log-panel">
         <div class="panel-title">OPS LOG</div>
@@ -357,7 +346,7 @@
       gates[2].state = 'parked'; gates[2].enteredAt = -2; gates[2].aircraft.opacity = 1;
 
       return {
-        elapsed: 0, simMinutes: 360, carbonSaved: 0,
+        elapsed: 0, realElapsed: 0, simMinutes: 360, carbonSaved: 0,
         displayOTP: 100, targetOTP: 100,
         weatherEventEnd: null, weatherActive: false,
         gateReassignments: 0, pendingGateReroute: null,
@@ -474,21 +463,32 @@
         state.log('Gate maintenance already in progress — request queued', 'info');
         return false;
       }
-      const eligible = state.gates.filter(g => g.state === 'empty');
+      let eligible = state.gates.filter(g => g.state === 'empty');
+      let forcedOccupied = false;
       if (eligible.length === 0) {
-        state.log('No gate currently free to schedule maintenance on', 'info');
-        return false;
+        // every gate is occupied — close one anyway. Its current flight still
+        // completes its turnaround normally; the gate simply won't accept a
+        // new arrival until maintenance clears. Prefer whichever gate is
+        // closest to emptying on its own, so the closure reads clearly.
+        const statePriority = { departing: 0, parked: 1, arriving: 2 };
+        eligible = state.gates.slice().sort((a, b) =>
+          (statePriority[a.state] ?? 3) - (statePriority[b.state] ?? 3));
+        forcedOccupied = true;
+      } else {
+        // pick the gate soonest due for its next arrival, so the closure forces a real reroute
+        eligible.sort((a, b) => {
+          const ta = state.elapsed - a.enteredAt, tb = state.elapsed - b.enteredAt;
+          const remA = (6 + a.id % 3) - ta, remB = (6 + b.id % 3) - tb;
+          return remA - remB;
+        });
       }
-      // pick the gate soonest due for its next arrival, so the closure forces a real reroute
-      eligible.sort((a, b) => {
-        const ta = state.elapsed - a.enteredAt, tb = state.elapsed - b.enteredAt;
-        const remA = (6 + a.id % 3) - ta, remB = (6 + b.id % 3) - tb;
-        return remA - remB;
-      });
       const closed = eligible[0];
       closed.maintenance = true;
       closed.maintenanceUntil = state.elapsed + 16;
       state.log('MAINTENANCE ALERT — gate ' + closed.label + ' flagged closed, gate-scheduling AI recalculating assignments', 'gate');
+      if (forcedOccupied) {
+        state.log('Gate ' + closed.label + ' was occupied — current flight completes normally, gate stays closed to new arrivals after', 'gate');
+      }
 
       const alternates = state.gates.filter(g => g.id !== closed.id && g.state === 'empty' && !g.maintenance);
       if (alternates.length > 0) {
@@ -522,15 +522,15 @@
     }
 
     function updateGate(state, g) {
-      if (g.maintenance) {
-        if (state.elapsed >= g.maintenanceUntil) {
-          g.maintenance = false;
-          state.log('MAINTENANCE COMPLETE — gate ' + g.label + ' returned to active pool', 'gate');
-        }
-        return;
-      }
       const t = state.elapsed - g.enteredAt;
       if (g.state === 'empty') {
+        if (g.maintenance) {
+          if (state.elapsed >= g.maintenanceUntil) {
+            g.maintenance = false;
+            state.log('MAINTENANCE COMPLETE — gate ' + g.label + ' returned to active pool', 'gate');
+          }
+          return; // closed to new arrivals until maintenance clears
+        }
         if (t > 6 + (g.id % 3)) {
           g.state = 'arriving'; g.enteredAt = state.elapsed;
           g.aircraft.opacity = 0; g.aircraft.x = g.pos.x; g.aircraft.z = g.pos.z;
@@ -599,11 +599,20 @@
       }
     }
 
+    const SIM_PACE = 0.6; // simulated events run at ~60% of real-time speed — enough breathing room to follow logs without dragging
+
     function tick(state, dt, speedMul) {
-      state.elapsed += dt;
-      state.simMinutes = 360 + state.elapsed * 4;
+      // the displayed clock always advances at true real-time speed (1 real
+      // second = 1 clock second), independent of how slow/fast the underlying
+      // simulation is paced — only the speed toggle (which scales dt itself
+      // before it reaches here) should make it visibly speed up.
+      state.realElapsed = (state.realElapsed || 0) + dt;
+      state.simMinutes = 360 + state.realElapsed / 60;
+
+      const gameDt = dt * SIM_PACE;
+      state.elapsed += gameDt;
       state.gates.forEach(g => updateGate(state, g));
-      state.vehicles.forEach(v => updateVehicle(state, v, dt, speedMul));
+      state.vehicles.forEach(v => updateVehicle(state, v, gameDt, speedMul));
       if (state.weatherEventEnd !== null && state.elapsed >= state.weatherEventEnd) {
         state.weatherActive = false;
         state.log('REPLAN COMPLETE — disruption absorbed, 0 cascading delays', 'electric');
@@ -632,7 +641,8 @@
       m = ((m % 1440) + 1440) % 1440;
       const hh = String(Math.floor(m / 60)).padStart(2, '0');
       const mm = String(Math.floor(m % 60)).padStart(2, '0');
-      return hh + ':' + mm;
+      const ss = String(Math.floor((m % 1) * 60)).padStart(2, '0');
+      return hh + ':' + mm + ':' + ss;
     }
 
     return { createState, tick, dispatch, previewDispatch, triggerFailure, triggerWeather, triggerMaintenance,
@@ -654,6 +664,28 @@
   const statFleetEl = document.getElementById('statFleet');
   const statMovesEl = document.getElementById('statMoves');
   const statGateAIEl = document.getElementById('statGateAI');
+
+  /* ---- keep the sidebar's rendered height exactly matched to the 3D panel ----
+     CSS Grid always sizes a row to the MAX of its items' natural content height,
+     so an unbounded item (the ops log, which grows as entries accumulate) can
+     never be reliably capped by CSS alone — it will just keep dragging the row
+     (and the map panel) taller. Measuring the map panel directly and applying
+     that as an explicit height sidesteps the problem entirely. */
+  const sidebarEl = document.querySelector('.sidebar');
+  function syncSidebarHeight(){
+    if (!sidebarEl || !mapPanelEl) return;
+    if (window.innerWidth <= 900){ sidebarEl.style.height = ''; return; }
+    const h = mapPanelEl.getBoundingClientRect().height;
+    if (h > 0) sidebarEl.style.height = h + 'px';
+  }
+  if ('ResizeObserver' in window){
+    new ResizeObserver(syncSidebarHeight).observe(mapPanelEl);
+  }
+  window.addEventListener('resize', syncSidebarHeight);
+  window.addEventListener('load', syncSidebarHeight);
+  syncSidebarHeight();
+  setTimeout(syncSidebarHeight, 0);
+
   const btnPause = document.getElementById('btnPause');
   const btnSpeed = document.getElementById('btnSpeed');
   const btnFault = document.getElementById('btnFault');
@@ -752,7 +784,7 @@
     btnPause.textContent = paused ? 'RESUME' : 'PAUSE';
   });
   btnSpeed.addEventListener('click', () => {
-    speedMultiplier = speedMultiplier === 1 ? 2 : 1;
+    speedMultiplier = speedMultiplier === 1 ? 1.5 : (speedMultiplier === 1.5 ? 2 : 1);
     btnSpeed.textContent = 'SPEED · ' + speedMultiplier + '×';
   });
   btnFault.addEventListener('click', () => SimCore.triggerFailure(state));
@@ -820,14 +852,14 @@
 
     /* ---- ground + grid ---- */
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(380, 280),
+      new THREE.PlaneGeometry(430, 320),
       new THREE.MeshStandardMaterial({ color: 0x1C2A4A, roughness: 0.92, metalness: 0.05 })
     );
     ground.rotation.x = -Math.PI/2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    const grid = new THREE.GridHelper(380, 38, COLORS.blue, 0x3A4F80);
+    const grid = new THREE.GridHelper(430, 43, COLORS.blue, 0x3A4F80);
     grid.position.y = 0.03;
     grid.material.transparent = true;
     grid.material.opacity = 0.5;
@@ -846,26 +878,26 @@
       return group;
     }
 
-    const terminal = holoBox(150, 16, 20, COLORS.panel, COLORS.white, 0.78);
-    terminal.position.set(0, 8, -60);
+    const terminal = holoBox(190, 20, 26, COLORS.panel, COLORS.white, 0.78);
+    terminal.position.set(0, 10, -60);
     scene.add(terminal);
 
-    const tower = holoBox(9, 36, 9, COLORS.panel, COLORS.lightBlue, 0.75);
-    tower.position.set(-64, 18, -60);
+    const tower = holoBox(12, 42, 12, COLORS.panel, COLORS.lightBlue, 0.75);
+    tower.position.set(-64, 21, -60);
     scene.add(tower);
 
     /* ---- gate pads + piers ---- */
     const gateVisuals = SimCore.GATE_DEFS.map(g => {
       const pier = new THREE.Mesh(
-        new THREE.BoxGeometry(3.2, 0.4, 13),
+        new THREE.BoxGeometry(4.2, 0.4, 17),
         new THREE.MeshStandardMaterial({ color: COLORS.panel, transparent:true, opacity:0.78 })
       );
-      pier.position.set(g.pos.x, 0.15, g.pos.z - 6.5);
+      pier.position.set(g.pos.x, 0.15, g.pos.z - 8.5);
       pier.receiveShadow = true;
       scene.add(pier);
 
       const padMat = new THREE.MeshBasicMaterial({ color: COLORS.lightBlue, transparent:true, opacity:0.7, side:THREE.DoubleSide });
-      const pad = new THREE.Mesh(new THREE.RingGeometry(4.4, 5.2, 32), padMat);
+      const pad = new THREE.Mesh(new THREE.RingGeometry(5.7, 6.7, 32), padMat);
       pad.rotation.x = -Math.PI/2;
       pad.position.set(g.pos.x, 0.06, g.pos.z);
       scene.add(pad);
@@ -880,12 +912,12 @@
       const cx = c.getContext('2d');
       cx.fillStyle = '#141C33'; cx.fillRect(0,0,c.width,c.height);
       cx.strokeStyle = 'rgba(255,255,255,0.85)';
-      cx.setLineDash([42,28]); cx.lineWidth = 8;
+      cx.setLineDash([46,32]); cx.lineWidth = 10;
       cx.beginPath(); cx.moveTo(0,64); cx.lineTo(1024,64); cx.stroke();
       return new THREE.CanvasTexture(c);
     }
     const runway = new THREE.Mesh(
-      new THREE.PlaneGeometry(230, 28),
+      new THREE.PlaneGeometry(250, 40),
       new THREE.MeshStandardMaterial({ map: runwayTexture(), roughness: 0.9 })
     );
     runway.rotation.x = -Math.PI/2;
@@ -894,7 +926,7 @@
     scene.add(runway);
 
     /* ---- hub platform ---- */
-    const hubGeo = new THREE.CylinderGeometry(26, 26, 1.1, 6);
+    const hubGeo = new THREE.CylinderGeometry(30, 30, 1.1, 6);
     const hub = new THREE.Mesh(hubGeo, new THREE.MeshStandardMaterial({ color: COLORS.panel, transparent:true, opacity:0.85 }));
     hub.position.set(-85, 0.55, 24);
     hub.receiveShadow = true;
@@ -936,6 +968,7 @@
       group.add(tail);
 
       group.rotation.y = Math.PI/2;
+      group.scale.set(1.45, 1.45, 1.45);
       return { group, fillMat, edgeMat };
     }
     const aircraftVisuals = SimCore.GATE_DEFS.map(() => {
