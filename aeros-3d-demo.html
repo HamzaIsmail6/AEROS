@@ -350,8 +350,10 @@
         displayOTP: 100, targetOTP: 100,
         weatherEventEnd: null, weatherActive: false,
         gateReassignments: 0, pendingGateReroute: null,
+        logSuppressUntil: 0,
         gates, vehicles, events: [], effects: [],
-        log: function (msg, color) {
+        log: function (msg, color, force) {
+          if (!force && this.realElapsed < this.logSuppressUntil) return; // ambient log muted — a simulate button is front and center
           this.events.push({ msg: msg, color: color, time: this.simMinutes });
           if (this.events.length > 200) this.events.shift();
         },
@@ -386,7 +388,6 @@
       const targetZ = gate.pos.z + svc.dz;
       const idle = state.vehicles.filter(v => v.kind === type && v.state === 'idle');
       if (idle.length === 0) {
-        state.log('NO ' + type.toUpperCase() + ' UNITS AVAILABLE — request queued, gate ' + gate.label, 'legacy');
         gate.dispatched[type] = false;
         return null;
       }
@@ -419,14 +420,48 @@
       return chosen;
     }
 
+    // Used only for the "simulate unit failure" demo: always finds a replacement.
+    // Prefers an idle or already-returning unit (nothing else gets disrupted); only
+    // as a last resort redirects a unit mid-task, since the swarm-reroute story
+    // this button tells should never come up empty.
+    function findGuaranteedReplacement(state, type, gate) {
+      const svc = SERVICE_DEFS.filter(s => s.type === type)[0];
+      const targetX = gate.pos.x + svc.dx;
+      const targetZ = gate.pos.z + svc.dz;
+      const candidates = state.vehicles.filter(v => v.kind === type && v.state !== 'fault');
+      if (candidates.length === 0) return null;
+
+      const free = candidates.filter(v => v.state === 'idle' || v.state === 'returning');
+      const pool = free.length > 0 ? free : candidates;
+
+      pool.forEach(v => { v._d = dist(v.x, v.z, targetX, targetZ); });
+      pool.sort((a, b) => {
+        const fa = a.fuel === 'electric' ? 0 : 1, fb = b.fuel === 'electric' ? 0 : 1;
+        if (fa !== fb) return fa - fb;
+        return a._d - b._d;
+      });
+      const chosen = pool[0];
+      const fromX = chosen.x, fromZ = chosen.z;
+      chosen.state = 'moving'; chosen.targetX = targetX; chosen.targetZ = targetZ;
+      chosen.taskGate = gate.id; chosen.taskType = type;
+      if (chosen.fuel === 'electric') {
+        state.carbonSaved += (CARBON_CREDIT[type] || 0.8) * (0.85 + Math.random() * 0.3);
+      }
+      state.pushEffect({ type: 'dispatchBeam', fromX: fromX, fromZ: fromZ, toX: targetX, toZ: targetZ, color: chosen.fuel });
+      return chosen;
+    }
+
+    const LOG_SUPPRESS_SECONDS = 4;
+
     function triggerFailure(state) {
+      state.logSuppressUntil = state.realElapsed + LOG_SUPPRESS_SECONDS;
       const active = state.vehicles.filter(v => v.state === 'moving' || v.state === 'working');
       if (active.length === 0) {
-        state.log('No active units to disrupt right now — try again shortly', 'info');
+        state.log('No active units to disrupt right now — try again shortly', 'info', true);
         return false;
       }
       const v = active[Math.floor(Math.random() * active.length)];
-      state.log('FAULT DETECTED — ' + v.id + ' offline mid-task', 'fault');
+      state.log('FAULT DETECTED — ' + v.id + ' offline mid-task', 'fault', true);
       state.pushEffect({ type: 'faultBurst', x: v.x, z: v.z });
       const gateId = v.taskGate, taskType = v.taskType;
       v.state = 'fault';
@@ -434,17 +469,23 @@
       const gate = state.gates.filter(g => g.id === gateId)[0];
       if (gate && gate.state === 'parked') {
         gate.dispatched[taskType] = false;
-        const replacement = dispatch(state, taskType, gate);
+        const replacement = findGuaranteedReplacement(state, taskType, gate);
         if (replacement) {
-          state.log('SWARM REROUTE — task reassigned autonomously to ' + replacement.id, 'electric');
+          state.log('SWARM REROUTE — task reassigned autonomously to ' + replacement.id, 'electric', true);
           state.pushEffect({ type: 'rerouteBeam', fromX: v.x, fromZ: v.z, toX: replacement.x, toZ: replacement.z });
+        } else {
+          state.log('SWARM REROUTE — no unit free yet, ' + gate.label + ' queued for the next available unit', 'legacy', true);
         }
+      } else {
+        state.log('SWARM REROUTE — task cleared, no replacement needed', 'electric', true);
       }
       return true;
     }
 
     function triggerWeather(state) {
-      state.log('WEATHER SYSTEM DETECTED — predictive replan initiated', 'info');
+      state.logSuppressUntil = state.realElapsed + LOG_SUPPRESS_SECONDS;
+      state.log('WEATHER SYSTEM DETECTED — predictive replan initiated', 'info', true);
+      state.log('PREDICTIVE ENGINE — reordering gate & taxi assignments to absorb the delay window', 'electric', true);
       state.weatherEventEnd = state.elapsed + 10;
       state.weatherActive = true;
       state.targetOTP = 100 - (5 + Math.random() * 6);
@@ -459,8 +500,9 @@
     }
 
     function triggerMaintenance(state) {
+      state.logSuppressUntil = state.realElapsed + LOG_SUPPRESS_SECONDS;
       if (state.gates.some(g => g.maintenance)) {
-        state.log('Gate maintenance already in progress — request queued', 'info');
+        state.log('Gate maintenance already in progress — request queued', 'info', true);
         return false;
       }
       let eligible = state.gates.filter(g => g.state === 'empty');
@@ -485,9 +527,19 @@
       const closed = eligible[0];
       closed.maintenance = true;
       closed.maintenanceUntil = state.elapsed + 16;
-      state.log('MAINTENANCE ALERT — gate ' + closed.label + ' flagged closed, gate-scheduling AI recalculating assignments', 'gate');
+      state.log('MAINTENANCE ALERT — gate ' + closed.label + ' flagged closed, gate-scheduling AI recalculating assignments', 'gate', true);
       if (forcedOccupied) {
-        state.log('Gate ' + closed.label + ' was occupied — current flight completes normally, gate stays closed to new arrivals after', 'gate');
+        // no gate was free — clear this one immediately rather than waiting for its
+        // current flight to finish a normal turnaround, and recall any vehicle that
+        // was mid-task there so it doesn't keep working a gate that's now empty
+        closed.state = 'empty';
+        closed.enteredAt = state.elapsed;
+        closed.aircraft.opacity = 0;
+        state.vehicles.forEach(v => {
+          if (v.taskGate === closed.id && (v.state === 'moving' || v.state === 'working' || v.state === 'working-departure')) {
+            v.state = 'returning'; v.targetX = v.home.x; v.targetZ = v.home.z;
+          }
+        });
       }
 
       const alternates = state.gates.filter(g => g.id !== closed.id && g.state === 'empty' && !g.maintenance);
@@ -500,10 +552,10 @@
         state.gateReassignments += 1;
         const carbonCredit = 1.4 + Math.random() * 0.8;
         state.carbonSaved += carbonCredit;
-        state.log('GATE AI — inbound flight rerouted ' + closed.label + ' → ' + target.label + ': shortest taxi distance, lowest-carbon route', 'gate');
+        state.log('GATE AI — inbound flight rerouted ' + closed.label + ' → ' + target.label + ': shortest taxi distance, lowest-carbon route', 'gate', true);
         state.pushEffect({ type: 'rerouteBeam', fromX: closed.pos.x, fromZ: closed.pos.z, toX: target.pos.x, toZ: target.pos.z, color: 'gate' });
       } else {
-        state.log('GATE AI — no gate free yet, holding inbound flight for next available slot', 'gate');
+        state.log('GATE AI — no gate free yet, holding inbound flight for next available slot', 'gate', true);
         state.pendingGateReroute = { closedId: closed.id, closedLabel: closed.label };
       }
       return true;
@@ -517,7 +569,7 @@
       state.gateReassignments += 1;
       const carbonCredit = 1.4 + Math.random() * 0.8;
       state.carbonSaved += carbonCredit;
-      state.log('GATE AI — held flight from ' + closedLabel + ' now assigned to ' + g.label + ', slot opened', 'gate');
+      state.log('GATE AI — held flight from ' + closedLabel + ' now assigned to ' + g.label + ', slot opened', 'gate', true);
       state.pushEffect({ type: 'rerouteBeam', fromX: g.pos.x, fromZ: g.pos.z, toX: g.pos.x, toZ: g.pos.z, color: 'gate' });
     }
 
@@ -527,7 +579,7 @@
         if (g.maintenance) {
           if (state.elapsed >= g.maintenanceUntil) {
             g.maintenance = false;
-            state.log('MAINTENANCE COMPLETE — gate ' + g.label + ' returned to active pool', 'gate');
+            state.log('MAINTENANCE COMPLETE — gate ' + g.label + ' returned to active pool', 'gate', true);
           }
           return; // closed to new arrivals until maintenance clears
         }
@@ -615,7 +667,7 @@
       state.vehicles.forEach(v => updateVehicle(state, v, gameDt, speedMul));
       if (state.weatherEventEnd !== null && state.elapsed >= state.weatherEventEnd) {
         state.weatherActive = false;
-        state.log('REPLAN COMPLETE — disruption absorbed, 0 cascading delays', 'electric');
+        state.log('REPLAN COMPLETE — disruption absorbed, 0 cascading delays', 'electric', true);
         state.weatherEventEnd = null;
         state.targetOTP = 97 + Math.random() * 3;
       }
