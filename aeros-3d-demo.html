@@ -63,7 +63,7 @@
   .stat-value{font-family:'Sora',sans-serif;font-size:17px;font-weight:700;color:var(--white);line-height:1.1;}
   .stat-label{font-size:8px;letter-spacing:0.06em;color:var(--ink-dim);margin-top:3px;line-height:1.3;}
 
-  .main-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:12px;align-items:stretch;}
+  .main-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:12px;align-items:start;}
   .map-panel{position:relative;background:radial-gradient(ellipse at 50% 20%, #1A2952, var(--void));
     border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:grab;}
   .map-panel:active{cursor:grabbing;}
@@ -94,7 +94,8 @@
   .webgl-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     text-align:center;padding:30px;color:var(--ink-dim);font-size:12px;line-height:1.7;}
 
-  .sidebar{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-height:0;align-items:stretch;}
+  .sidebar{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-height:0;align-items:stretch;
+    height:400px;}
   .sidebar-col{display:flex;flex-direction:column;gap:12px;min-height:0;}
   .panel{background:linear-gradient(160deg, var(--panel), var(--panel2));border:1px solid var(--line);
     border-radius:10px;padding:10px;display:flex;flex-direction:column;min-height:0;}
@@ -234,7 +235,7 @@
     <div class="map-panel" id="mapPanel">
       <canvas id="scene3d"></canvas>
       <div class="scene-labels" id="sceneLabels"></div>
-      <div class="cam-hint">drag to orbit · scroll to zoom</div>
+      <div class="cam-hint">drag to orbit · scroll / pinch to zoom · double-click to reset</div>
       <div class="replan-badge" id="replanBadge">REPLANNING</div>
     </div>
 
@@ -315,10 +316,114 @@
       { type: 'tug', label: 'Pushback', triggerAt: 12.5, previewAt: 9.0, duration: 1.5, dx: -8, dz: 7 }
     ];
     const CARBON_CREDIT = { tug: 3.2, baggage: 0.6, catering: 0.9, fuel: 1.4 };
-    const DEPART_DUR = 5.5;   // pushback -> taxi -> line-up -> takeoff roll, in sim seconds
+    const DEPART_DUR = 7.2;   // pushback -> taxiway -> line-up -> takeoff roll, in sim seconds
+    const ARRIVE_DUR = 8.0;   // final approach -> touchdown -> rollout -> taxi to stand, in sim seconds
+    const ARRIVAL_TAXIWAY_Z = 26;  // dedicated inbound taxiway, parallel to (and clearly separated from) the departure one at z=40
+    const ARRIVAL_EXIT_X = 70;     // high-speed runway turnoff used only by landing traffic — kept clear of the hub (west side) and the departure taxiway's own footprint
+
+    // full flight path as one continuous list of waypoints: straight-in final
+    // approach -> touchdown -> rollout -> runway-exit turn -> arrival taxiway
+    // -> gate connector -> stand. Folding the approach leg in here too means
+    // there's only ever one position curve for the whole arrival — no seam
+    // between "flying" and "taxiing" for the easing to stumble over.
+    function arrivalGroundPath(gate) {
+      return [
+        { x: -175, z: 82 },
+        { x: -100, z: 82 },
+        { x: ARRIVAL_EXIT_X, z: 82 },
+        { x: ARRIVAL_EXIT_X, z: ARRIVAL_TAXIWAY_Z },
+        { x: gate.pos.x, z: ARRIVAL_TAXIWAY_Z },
+        { x: gate.pos.x, z: gate.pos.z },
+      ];
+    }
+
+    // one aircraft on the runway at a time: arrivals hold short until it's clear
+    function runwayOccupied(state) {
+      return state.gates.some(o => {
+        if (o.state === 'arriving') { const p = (state.elapsed - o.enteredAt) / ARRIVE_DUR; return p < 0.40; }
+        if (o.state === 'departing') { const p = (state.elapsed - o.enteredAt) / DEPART_DUR; return p > 0.50; }
+        return false;
+      });
+    }
     function dist(x1, z1, x2, z2) { return Math.hypot(x2 - x1, z2 - z1); }
     function lerp(a, b, t) { return a + (b - a) * t; }
     function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    // walks a list of {x,z} waypoints by arc-length fraction (0..1) — used so
+    // ground taxi paths actually trace the taxiway strips instead of cutting
+    // a diagonal shortcut across the apron
+    function polylinePosition(waypoints, frac) {
+      const segLens = [];
+      let total = 0;
+      for (let i = 1; i < waypoints.length; i++) {
+        const len = dist(waypoints[i-1].x, waypoints[i-1].z, waypoints[i].x, waypoints[i].z);
+        segLens.push(len);
+        total += len;
+      }
+      let target = clamp(frac, 0, 1) * total;
+      let acc = 0;
+      for (let i = 0; i < segLens.length; i++) {
+        const segLen = segLens[i];
+        if (target <= acc + segLen || i === segLens.length - 1) {
+          const segFrac = segLen > 0 ? clamp((target - acc) / segLen, 0, 1) : 1;
+          const a = waypoints[i], b = waypoints[i+1];
+          return { x: lerp(a.x, b.x, segFrac), z: lerp(a.z, b.z, segFrac) };
+        }
+        acc += segLen;
+      }
+      const last = waypoints[waypoints.length-1];
+      return { x: last.x, z: last.z };
+    }
+
+    // blends a small rounded curve into each interior corner of a waypoint
+    // list (quadratic-bezier corner cut) so ground paths read as smooth,
+    // continuous turns rather than pivoting sharply at each right angle
+    function roundWaypoints(waypoints, radius, segs) {
+      if (waypoints.length < 3) return waypoints;
+      const out = [waypoints[0]];
+      for (let i = 1; i < waypoints.length - 1; i++) {
+        const prev = waypoints[i-1], cur = waypoints[i], next = waypoints[i+1];
+        const d1 = dist(prev.x, prev.z, cur.x, cur.z);
+        const d2 = dist(cur.x, cur.z, next.x, next.z);
+        const r = Math.min(radius, d1 * 0.45, d2 * 0.45);
+        if (r < 0.05) { out.push(cur); continue; }
+        const t1 = 1 - r / d1, t2 = r / d2;
+        const p1 = { x: lerp(prev.x, cur.x, t1), z: lerp(prev.z, cur.z, t1) };
+        const p2 = { x: lerp(cur.x, next.x, t2), z: lerp(cur.z, next.z, t2) };
+        out.push(p1);
+        for (let s = 1; s < segs; s++) {
+          const t = s / segs, it = 1 - t;
+          out.push({ x: it*it*p1.x + 2*it*t*cur.x + t*t*p2.x, z: it*it*p1.z + 2*it*t*cur.z + t*t*p2.z });
+        }
+        out.push(p2);
+      }
+      out.push(waypoints[waypoints.length - 1]);
+      return out;
+    }
+
+    // stand -> pushback clear -> down the gate connector -> along the main
+    // taxiway -> up the runway link, ending at the hold point. Mirrors the
+    // physical taxiStrip() geometry laid down in the 3D environment.
+    // (used by the tow tug, which disconnects at the hold point)
+    function departureTaxiWaypoints(gate) {
+      return [
+        { x: gate.pos.x, z: gate.pos.z },
+        { x: gate.pos.x, z: gate.pos.z - 7 },
+        { x: gate.pos.x, z: 40 },
+        { x: 0, z: 40 },
+        { x: 0, z: 62 },
+      ];
+    }
+
+    // the same route continued through line-up and the takeoff roll, as one
+    // continuous path — used by the aircraft itself, so the turn onto the
+    // runway is just another rounded corner rather than a hard-seamed phase change
+    function departureGroundPath(gate) {
+      const path = departureTaxiWaypoints(gate);
+      path.push({ x: 2, z: 82 });
+      path.push({ x: 132, z: 82 });
+      return path;
+    }
 
     function freshServiceFlags() {
       const flags = {};
@@ -584,15 +689,24 @@
           }
           return; // closed to new arrivals until maintenance clears
         }
-        if (t > 6 + (g.id % 3)) {
+        if (t > 6 + (g.id % 3) && !runwayOccupied(state)) {
           g.state = 'arriving'; g.enteredAt = state.elapsed;
-          g.aircraft.opacity = 0; g.aircraft.x = g.pos.x; g.aircraft.z = g.pos.z;
+          g.aircraft.opacity = 0; g.aircraft.x = -175; g.aircraft.z = 82;
           g.dispatched = freshServiceFlags();
           g.previewShown = freshServiceFlags();
         }
       } else if (g.state === 'arriving') {
-        g.aircraft.opacity = clamp(t / 1.2, 0, 1);
-        if (t > 1.2) { g.state = 'parked'; g.enteredAt = state.elapsed; }
+        const p = clamp(t / ARRIVE_DUR, 0, 1);
+        // one continuous ease for the whole flight: fast on approach/rollout,
+        // smoothly decelerating all the way to a stop at the gate. A single
+        // curve across the entire path means the runway-exit turn is never a
+        // seam the motion has to jump across — it just reads as one fluid taxi.
+        const e = 1 - (1 - p) * (1 - p);
+        const pos = polylinePosition(roundWaypoints(arrivalGroundPath(g), 9, 6), e);
+        g.aircraft.x = pos.x;
+        g.aircraft.z = pos.z;
+        g.aircraft.opacity = p < 0.05 ? p / 0.05 : 1;
+        if (p >= 1) { g.state = 'parked'; g.enteredAt = state.elapsed; g.aircraft.opacity = 1; }
       } else if (g.state === 'parked') {
         g.aircraft.opacity = 1;
         SERVICE_DEFS.forEach(function (svc) {
@@ -601,28 +715,14 @@
         });
       } else if (g.state === 'departing') {
         const p = clamp(t / DEPART_DUR, 0, 1);
-        let ax, az;
-        if (p < 0.30) {
-          // pushback + taxi from the stand to the hold point
-          const q = p / 0.30;
-          const e = q * q * (3 - 2 * q);
-          ax = lerp(g.pos.x, 0, e);
-          az = lerp(g.pos.z, 62, e);
-        } else if (p < 0.42) {
-          // line up onto the runway centerline
-          const q = (p - 0.30) / 0.12;
-          ax = lerp(0, 2, q);
-          az = lerp(62, 82, q);
-        } else {
-          // accelerating takeoff roll down the runway
-          const q = (p - 0.42) / 0.58;
-          const acc = q * q * (0.4 + 0.6 * q);
-          ax = lerp(2, 132, acc);
-          az = 82;
-        }
-        g.aircraft.x = ax;
-        g.aircraft.z = az;
-        g.aircraft.opacity = p > 0.86 ? Math.max(0, 1 - (p - 0.86) / 0.14) : 1;
+        // mirror image of the arrival curve: smooth standstill start at
+        // pushback, continuously accelerating the whole way through the
+        // taxi, line-up and takeoff roll — one curve, no stitched seams.
+        const e = p * p;
+        const pos = polylinePosition(roundWaypoints(departureGroundPath(g), 9, 6), e);
+        g.aircraft.x = pos.x;
+        g.aircraft.z = pos.z;
+        g.aircraft.opacity = p > 0.88 ? Math.max(0, 1 - (p - 0.88) / 0.12) : 1;
         if (p >= 1) { g.state = 'empty'; g.enteredAt = state.elapsed; g.aircraft.opacity = 0; resolvePendingReroute(state, g); }
       }
     }
@@ -651,12 +751,11 @@
         }
       } else if (v.state === 'working-departure') {
         const gate = state.gates.filter(g => g.id === v.taskGate)[0];
-        const p = gate ? clamp((state.elapsed - gate.enteredAt) / (DEPART_DUR * 0.30), 0, 1) : 1;
-        const e = p * p * (3 - 2 * p);
-        const gx = gate ? gate.pos.x : v.x;
-        const gz = gate ? gate.pos.z : v.z;
-        v.x = lerp(gx, 0, e);
-        v.z = lerp(gz, 62, e) - 7;   // rides the aircraft's nose through pushback, then disconnects at the hold point
+        const p = gate ? clamp((state.elapsed - gate.enteredAt) / (DEPART_DUR * 0.55), 0, 1) : 1;
+        const e = p * p; // same accelerating curve as the aircraft it's towing, so it stays coupled to the nose
+        const pos = gate ? polylinePosition(roundWaypoints(departureTaxiWaypoints(gate), 9, 5), e) : { x: v.x, z: v.z };
+        v.x = pos.x;
+        v.z = pos.z - 7;   // trails just behind the nose along the same taxiway path
         if (p >= 1) { v.state = 'returning'; v.targetX = v.home.x; v.targetZ = v.home.z; }
       } else if (v.state === 'returning') {
         const d = dist(v.x, v.z, v.home.x, v.home.z);
@@ -718,7 +817,7 @@
     }
 
     return { createState, tick, dispatch, previewDispatch, triggerFailure, triggerWeather, triggerMaintenance,
-             getForecast, formatClock, GATE_DEFS, HUB_SLOTS, VEHICLE_DEFS, SERVICE_DEFS, DEPART_DUR };
+             getForecast, formatClock, GATE_DEFS, HUB_SLOTS, VEHICLE_DEFS, SERVICE_DEFS, DEPART_DUR, ARRIVE_DUR };
   })();
 
   /* =========================================================================
@@ -737,12 +836,12 @@
   const statMovesEl = document.getElementById('statMoves');
   const statGateAIEl = document.getElementById('statGateAI');
 
-  /* ---- keep the sidebar's rendered height exactly matched to the 3D panel ----
-     CSS Grid always sizes a row to the MAX of its items' natural content height,
-     so an unbounded item (the ops log, which grows as entries accumulate) can
-     never be reliably capped by CSS alone — it will just keep dragging the row
-     (and the map panel) taller. Measuring the map panel directly and applying
-     that as an explicit height sidesteps the problem entirely. */
+  /* ---- fit the sidebar's height to the map panel's natural size ----
+     The map panel is left unstretched (main-grid uses align-items:start) so
+     it hugs its 2:1 canvas exactly, with no leftover empty space below it.
+     The sidebar (predictive/forecast/log panels) then matches that same
+     height, so all three panels line up — the map panel is the source of
+     truth, not the other way around. */
   const sidebarEl = document.querySelector('.sidebar');
   function syncSidebarHeight(){
     if (!sidebarEl || !mapPanelEl) return;
@@ -884,12 +983,31 @@
     scene.fog = new THREE.Fog(COLORS.voidC, 190, 460);
 
     const camera = new THREE.PerspectiveCamera(46, 1.6, 1, 1000);
-    const camTarget = new THREE.Vector3(-6, 6, 4);
-    const camSpherical = new THREE.Spherical(215, Math.PI*0.36, Math.PI*0.12);
+    // damped orbit camera: current state eases toward the desired state each frame
+    const camCur = { radius: 215, phi: Math.PI*0.36, theta: Math.PI*0.12, tx: -6, ty: 6, tz: 4 };
+    const camDes = { radius: 215, phi: Math.PI*0.36, theta: Math.PI*0.12, tx: -6, ty: 6, tz: 4 };
+    const CAM_HOME = { radius: 215, phi: Math.PI*0.36, theta: Math.PI*0.12, tx: -6, ty: 6, tz: 4 };
+    function clampCamDes(){
+      camDes.radius = Math.max(60, Math.min(380, camDes.radius));
+      camDes.phi = Math.max(0.15, Math.min(1.35, camDes.phi));
+    }
     function applyCamera(){
-      const offset = new THREE.Vector3().setFromSpherical(camSpherical);
-      camera.position.copy(camTarget).add(offset);
-      camera.lookAt(camTarget);
+      const sp = Math.sin(camCur.phi), cp = Math.cos(camCur.phi);
+      camera.position.set(
+        camCur.tx + camCur.radius * sp * Math.sin(camCur.theta),
+        camCur.ty + camCur.radius * cp,
+        camCur.tz + camCur.radius * sp * Math.cos(camCur.theta)
+      );
+      camera.lookAt(camCur.tx, camCur.ty, camCur.tz);
+    }
+    function easeCamera(dt){
+      const k = Math.min(1, dt * 7);
+      camCur.radius += (camDes.radius - camCur.radius) * k;
+      camCur.phi    += (camDes.phi    - camCur.phi)    * k;
+      camCur.theta  += (camDes.theta  - camCur.theta)  * k;
+      camCur.tx     += (camDes.tx     - camCur.tx)     * k;
+      camCur.tz     += (camDes.tz     - camCur.tz)     * k;
+      applyCamera();
     }
     applyCamera();
 
@@ -1044,34 +1162,70 @@
     scene.add(towerGlow.spr);
     env.towerGlowMat = towerGlow.mat;
 
-    /* ---- taxiway network: darker asphalt strips + amber centerlines ---- */
+    /* ---- taxiway network: darker asphalt strips + centerlines ---- */
     const taxiMat = new THREE.MeshStandardMaterial({ color: 0x152036, roughness: 0.95 });
     const lineMatAmber = new THREE.MeshBasicMaterial({ color: COLORS.amber, transparent: true, opacity: 0.7 });
-    function taxiStrip(w, l, x, z){
+    const lineMatBlue = new THREE.MeshBasicMaterial({ color: COLORS.lightBlue, transparent: true, opacity: 0.7 });
+    function taxiStrip(w, l, x, z, lineMat){
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, l), taxiMat);
       m.rotation.x = -Math.PI/2;
       m.position.set(x, 0.035, z);
       m.receiveShadow = true;
       scene.add(m);
-      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.55, l), lineMatAmber);
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.55, l), lineMat || lineMatAmber);
       line.rotation.x = -Math.PI/2;
       line.position.set(x, 0.055, z);
       scene.add(line);
     }
-    // main parallel taxiway
-    const mainTaxi = new THREE.Mesh(new THREE.PlaneGeometry(220, 10), taxiMat);
+    // departure taxiway (amber centerline) — outbound aircraft only. Sized to
+    // just cover the gates plus a little margin, not stretching off into empty apron.
+    const mainTaxi = new THREE.Mesh(new THREE.PlaneGeometry(122, 10), taxiMat);
     mainTaxi.rotation.x = -Math.PI/2;
     mainTaxi.position.set(0, 0.035, 40);
     mainTaxi.receiveShadow = true;
     scene.add(mainTaxi);
-    const mainTaxiLine = new THREE.Mesh(new THREE.PlaneGeometry(220, 0.55), lineMatAmber);
+    const mainTaxiLine = new THREE.Mesh(new THREE.PlaneGeometry(122, 0.55), lineMatAmber);
     mainTaxiLine.rotation.x = -Math.PI/2;
     mainTaxiLine.position.set(0, 0.055, 40);
     scene.add(mainTaxiLine);
-    // gate connectors down to the taxiway
+    // gate connectors — long enough to reach both the departure and arrival taxiways
     SimCore.GATE_DEFS.forEach(g => taxiStrip(6, 84, g.pos.x, -1));
-    // taxiway -> runway link
+    // departure taxiway -> runway hold point link
     taxiStrip(9, 18, 0, 53);
+
+    // arrival taxiway (blue centerline) — a physically separate parallel lane for
+    // inbound aircraft only. Kept well clear of the departure taxiway in z (no
+    // touching edges) and routed to its own runway exit on the opposite side from
+    // the hub, so the two lanes never run on top of each other or cross paths.
+    const arrivalTaxi = new THREE.Mesh(new THREE.PlaneGeometry(150, 8), taxiMat);
+    arrivalTaxi.rotation.x = -Math.PI/2;
+    arrivalTaxi.position.set(7, 0.033, 26);
+    arrivalTaxi.receiveShadow = true;
+    scene.add(arrivalTaxi);
+    const arrivalTaxiLine = new THREE.Mesh(new THREE.PlaneGeometry(150, 0.5), lineMatBlue);
+    arrivalTaxiLine.rotation.x = -Math.PI/2;
+    arrivalTaxiLine.position.set(7, 0.053, 26);
+    scene.add(arrivalTaxiLine);
+    // dedicated high-speed runway turnoff for landing traffic, on the east side —
+    // clear of both the departure taxiway's footprint and the hub to the west
+    taxiStrip(9, 36, 70, 44, lineMatBlue);
+
+    // every taxiway end that actually connects to another strip (gate
+    // connectors into the two lanes, both lanes into the runway) already
+    // overlaps that strip, so it reads as continuous. The two lanes' far
+    // ends don't connect to anything, though — they just used to stop in
+    // open apron. Cap each with a thin perpendicular threshold marking so
+    // it reads as a deliberate stop rather than pavement cut off mid-strip.
+    function taxiEndCap(x, z, spanWidth, mat) {
+      const cap = new THREE.Mesh(new THREE.PlaneGeometry(1.3, spanWidth), mat);
+      cap.rotation.x = -Math.PI / 2;
+      cap.position.set(x, 0.06, z);
+      scene.add(cap);
+    }
+    taxiEndCap(-61, 40, 10, lineMatAmber);   // departure taxiway, west end
+    taxiEndCap(61, 40, 10, lineMatAmber);    // departure taxiway, east end
+    taxiEndCap(-68, 26, 8, lineMatBlue);     // arrival taxiway, west end
+    taxiEndCap(82, 26, 8, lineMatBlue);      // arrival taxiway, east end
 
     /* ---- gate pads + piers + jet bridges ---- */
     const gateVisuals = SimCore.GATE_DEFS.map(g => {
@@ -1304,8 +1458,10 @@
       }
     }
     SimCore.GATE_DEFS.forEach(g => greensPath(g.pos.x, -40, g.pos.x, 44, 3));
-    greensPath(-108, 40, 108, 40, 6);
+    greensPath(-58, 40, 58, 40, 6);
     greensPath(0, 45, 0, 61, 2);
+    greensPath(80, 26, -65, 26, 6);       // arrival taxiway: flows toward the gates
+    greensPath(70, 60, 70, 30, 3);        // arrival runway exit link: flows down off the runway
 
     /* ---- wigwag runway guard lights at the hold point ---- */
     const wig1 = makeGlow(COLORS.amber, 3.2, 3.2, 1);
@@ -1638,26 +1794,53 @@
     }
     function lerpN(a,b,t){ return a+(b-a)*t; }
 
-    /* ---- camera orbit controls (hand-rolled, no extra dependency) ---- */
-    let dragging = false, lastX=0, lastY=0;
-    let lastInteract = performance.now()/1000;
-    canvas.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; lastInteract = performance.now()/1000; try{canvas.setPointerCapture(e.pointerId);}catch(_){} });
-    window.addEventListener('pointerup', () => { dragging = false; });
+    /* ---- orbit camera controls (mouse + touch, damped) ----
+       mouse:  drag orbit · scroll zoom · double-click reset
+       touch:  one finger orbit · two fingers pinch-zoom · double-tap reset */
+    const pointers = new Map();
+    let pinchDist = 0;
+    function beginPinch(){
+      const pts = [...pointers.values()];
+      pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    }
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('pointerdown', e => {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 2) beginPinch();
+      try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+    });
+    function endPointer(e){
+      pointers.delete(e.pointerId);
+      if (pointers.size === 2) beginPinch();
+    }
+    window.addEventListener('pointerup', endPointer);
+    window.addEventListener('pointercancel', endPointer);
     canvas.addEventListener('pointermove', e => {
-      if (!dragging) return;
-      const dx = e.clientX - lastX, dy = e.clientY - lastY;
-      lastX = e.clientX; lastY = e.clientY;
-      lastInteract = performance.now()/1000;
-      camSpherical.theta -= dx*0.006;
-      camSpherical.phi = Math.max(0.18, Math.min(1.3, camSpherical.phi - dy*0.005));
-      applyCamera();
+      if (!pointers.has(e.pointerId)) return;
+      const prev = pointers.get(e.pointerId);
+      const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size >= 2){
+        // pinch: zoom by finger-distance ratio
+        const pts = [...pointers.values()];
+        const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        if (pinchDist > 0 && d > 0) camDes.radius *= pinchDist / d;
+        pinchDist = d;
+      } else {
+        camDes.theta -= dx * 0.006;
+        camDes.phi   -= dy * 0.005;
+      }
+      clampCamDes();
     });
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
-      lastInteract = performance.now()/1000;
-      camSpherical.radius = Math.max(110, Math.min(340, camSpherical.radius + e.deltaY*0.15));
-      applyCamera();
+      camDes.radius *= Math.pow(1.0014, e.deltaY);   // exponential zoom: equal steps feel equal at any distance
+      clampCamDes();
     }, { passive:false });
+    canvas.addEventListener('dblclick', () => {
+      camDes.radius = CAM_HOME.radius; camDes.phi = CAM_HOME.phi; camDes.theta = CAM_HOME.theta;
+    });
 
     /* ---- gate HTML label overlays ---- */
     const gateLabelEls = SimCore.GATE_DEFS.map(g => {
@@ -1733,28 +1916,33 @@
         let lift = 0, pitch = 0, targetH = Math.PI/2;
         if (g.state === 'departing'){
           const p = Math.min(1, (state.elapsed - g.enteredAt) / SimCore.DEPART_DUR);
-          if (p < 0.12){
+          if (p < 0.05){
             targetH = Math.PI/2;                 // pushback: rolls tail-first, nose stays on the terminal
           } else if (Math.hypot(vx, vz) > 0.015){
-            targetH = Math.atan2(-vz, vx);       // taxi, line-up turn, and roll all face the motion
+            targetH = Math.atan2(-vz, vx);       // taxiway turns, line-up, and roll all face the motion
           }
-          if (p > 0.62){
-            const c = (p - 0.62) / 0.38;         // rotation + climb only once rolling down the runway
+          if (p > 0.78){
+            const c = (p - 0.78) / 0.22;         // rotation + climb near the far end of the takeoff roll
             lift = c*c*30;
             pitch = Math.min(0.34, c*0.55);
           }
         } else if (g.state === 'arriving'){
-          const p = Math.min(1, (state.elapsed - g.enteredAt) / 1.2);
-          lift = (1-p)*(1-p)*6;
-          pitch = 0.12*(1-p);
+          const p = Math.min(1, (state.elapsed - g.enteredAt) / SimCore.ARRIVE_DUR);
+          if (p < 0.03) av.hdg = 0;              // fades in already established on final, facing down the runway
+          if (Math.hypot(vx, vz) > 0.015) targetH = Math.atan2(-vz, vx);
+          if (p < 0.15){
+            const q = p / 0.15;
+            lift = (1-q)*(1-q)*26;               // glide-slope descent to the threshold
+            pitch = 0.05 + 0.07*q;               // nose-up, flaring into touchdown
+          }
         }
         let dH = targetH - av.hdg;
         dH = Math.atan2(Math.sin(dH), Math.cos(dH));
-        av.hdg += dH * Math.min(1, (dt||0.016)*5);
+        av.hdg += dH * (1 - Math.exp(-6.2 * (dt||0.016)));
         av.group.rotation.y = av.hdg;
         av.air.rotation.z = pitch;
         av.group.position.y = 4.6 + lift;
-        av.gear.visible = lift < 1.6;
+        av.gear.visible = !(g.state === 'departing' && lift > 1.6);   // gear down on approach, retracts on departure climb
 
         const a = g.aircraft.opacity;
         av.group.visible = a > 0.02;
@@ -1769,7 +1957,7 @@
         let exhaust = 0.1;
         if (g.state === 'departing'){
           const p = Math.min(1, (state.elapsed - g.enteredAt) / SimCore.DEPART_DUR);
-          exhaust = p < 0.42 ? 0.18 : 0.3 + ((p - 0.42) / 0.58) * 0.7;
+          exhaust = p < 0.64 ? 0.18 : 0.3 + ((p - 0.64) / 0.36) * 0.7;
         }
         av.exhaustMats[0].opacity = exhaust * a;
         av.exhaustMats[1].opacity = exhaust * a;
@@ -1901,11 +2089,7 @@
       let dt = (ts - lastTs) / 1000;
       lastTs = ts;
       dt = Math.min(dt, 0.05);
-      // idle cinematic orbit: after 8s without interaction, drift slowly around the field
-      if (ts/1000 - lastInteract > 8){
-        camSpherical.theta += dt * 0.045;
-        applyCamera();
-      }
+      easeCamera(dt);
       if (!paused){ SimCore.tick(state, dt * speedMultiplier, speedMultiplier); }
       syncScene(dt, ts/1000);
       updateUI(dt);
