@@ -375,9 +375,27 @@
   .io-node:hover{filter:drop-shadow(0 0 10px rgba(191,224,255,0.8));animation-play-state:paused;}
 
   /* demo slide */
-  .demo-frame-wrap{margin-top:36px;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  .demo-frame-wrap{position:relative;margin-top:36px;border:1px solid var(--line);border-radius:14px;overflow:hidden;
     box-shadow:0 30px 80px rgba(0,0,0,0.45);}
   .demo-frame-wrap iframe{width:100%;height:min(78vh,760px);border:none;display:block;background:var(--void);}
+
+  .demo-fs-btn{position:absolute;top:14px;right:14px;z-index:6;display:flex;align-items:center;gap:7px;
+    background:rgba(11,17,33,0.85);border:1px solid var(--line);color:var(--ink);font-family:'JetBrains Mono',monospace;
+    font-size:11px;letter-spacing:0.07em;padding:9px 15px;border-radius:8px;cursor:pointer;backdrop-filter:blur(4px);
+    transition:background 0.2s,transform 0.2s;}
+  .demo-fs-btn:hover{background:rgba(37,99,235,0.4);}
+  .demo-fs-btn:active{transform:scale(0.96);}
+  .demo-fs-btn svg{width:14px;height:14px;flex:none;}
+
+  .demo-frame-wrap:fullscreen{background:#000;display:flex;align-items:center;justify-content:center;border-radius:0;}
+  .demo-frame-wrap:fullscreen iframe{height:100vh;width:100vw;}
+  .demo-frame-wrap:-webkit-full-screen{background:#000;display:flex;align-items:center;justify-content:center;border-radius:0;}
+  .demo-frame-wrap:-webkit-full-screen iframe{height:100vh;width:100vw;}
+
+  /* fallback for browsers (some tablet Safari versions) without full iframe/div Fullscreen API support */
+  .demo-frame-wrap.fake-fullscreen{position:fixed;inset:0;z-index:9999;margin:0;border-radius:0;border:none;
+    box-shadow:none;display:flex;align-items:center;justify-content:center;background:#000;}
+  .demo-frame-wrap.fake-fullscreen iframe{height:100vh;width:100vw;}
 
   /* CTA / closing */
   .cta-slide{text-align:center;align-items:center;background:linear-gradient(180deg,rgba(7,27,51,0.88),rgba(7,27,51,0.94)),url('images/closing-bg.jpg');background-size:cover;background-position:center;}
@@ -1008,8 +1026,14 @@
     <div class="slide-inner" style="max-width:1280px;">
       <div class="eyebrow">See It In Action</div>
       <h2 class="slide-title">Live Operations Demo</h2>
-      <div class="demo-frame-wrap">
-        <iframe src="aeros-3d-demo.html" title="AEROS live operations demo" loading="lazy"></iframe>
+      <div class="demo-frame-wrap" id="demoFrameWrap">
+        <button class="demo-fs-btn" id="demoFsBtn" type="button" aria-label="Toggle fullscreen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/>
+          </svg>
+          <span>FULLSCREEN</span>
+        </button>
+        <iframe src="aeros-3d-demo.html" title="AEROS live operations demo" loading="lazy" allowfullscreen></iframe>
       </div>
     </div>
   </section>
@@ -1123,6 +1147,53 @@
     dotRail.appendChild(b);
   });
   var dots = Array.prototype.slice.call(dotRail.children);
+
+  /* live demo panel: fullscreen toggle */
+  var demoWrap = document.getElementById('demoFrameWrap');
+  var demoFsBtn = document.getElementById('demoFsBtn');
+  if (demoWrap && demoFsBtn) {
+    var fsSupported = !!(demoWrap.requestFullscreen || demoWrap.webkitRequestFullscreen);
+    var demoHomeParent = demoWrap.parentNode;
+    var demoHomeNext = demoWrap.nextSibling;
+    function isFullscreenNow(){
+      return !!(document.fullscreenElement || document.webkitFullscreenElement) || demoWrap.classList.contains('fake-fullscreen');
+    }
+    function setBtnLabel(){
+      var on = isFullscreenNow();
+      demoFsBtn.querySelector('span').textContent = on ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+      demoFsBtn.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Enter fullscreen');
+    }
+    function enterFakeFullscreen(){
+      // reparent to <body> so position:fixed isn't captured by a transformed
+      // ancestor (.slide-inner animates with `transform`, which would otherwise
+      // make IT the containing block instead of the viewport)
+      document.body.appendChild(demoWrap);
+      demoWrap.classList.add('fake-fullscreen');
+    }
+    function exitFakeFullscreen(){
+      demoWrap.classList.remove('fake-fullscreen');
+      if (demoHomeNext) demoHomeParent.insertBefore(demoWrap, demoHomeNext);
+      else demoHomeParent.appendChild(demoWrap);
+    }
+    demoFsBtn.addEventListener('click', function(){
+      if (demoWrap.classList.contains('fake-fullscreen')) {
+        exitFakeFullscreen();
+      } else if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } else if (fsSupported) {
+        if (demoWrap.requestFullscreen) demoWrap.requestFullscreen().catch(enterFakeFullscreen);
+        else demoWrap.webkitRequestFullscreen();
+      } else {
+        // Fullscreen API unavailable on this element/browser (some tablet Safari
+        // versions) — fall back to a fixed overlay that fills the viewport instead.
+        enterFakeFullscreen();
+      }
+      setTimeout(setBtnLabel, 50);
+    });
+    document.addEventListener('fullscreenchange', setBtnLabel);
+    document.addEventListener('webkitfullscreenchange', setBtnLabel);
+  }
 
   function currentIndex(){
     var mid = deck.scrollTop + deck.clientHeight/2;
