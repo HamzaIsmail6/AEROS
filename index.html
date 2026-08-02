@@ -293,6 +293,35 @@
   .compare-col h3{font-size:17px;margin-bottom:16px;}
   .compare-col--legacy h3{color:var(--mauve);}
   .compare-item{font-size:13.5px;padding:9px 0;border-bottom:1px dashed rgba(255,255,255,0.12);}
+
+  /* ---------- competitive schedule / comparison matrix ---------- */
+  .vs-table{display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:1px;margin-top:20px;
+    background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .vs-row{display:contents;}
+  .vs-cell{background:var(--panel2);padding:14px 9px;font-size:11px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;gap:7px;line-height:1.45;color:var(--ink);}
+  .vs-row:nth-of-type(even) .vs-cell:not(.vs-aeros){background:var(--panel);}
+  .vs-cell.vs-label{flex-direction:row;justify-content:flex-start;text-align:left;color:var(--white);
+    font-size:13px;font-weight:600;padding-left:16px;gap:9px;}
+  .vs-label-icon{width:17px;height:17px;flex:none;color:var(--lilac);}
+  .vs-head .vs-cell{background:#0A2038;font-family:'Sora',sans-serif;font-weight:700;font-size:11.5px;
+    letter-spacing:0.05em;color:var(--white);text-transform:uppercase;}
+  .vs-head .vs-cell.vs-aeros{color:var(--white);background:#0A2038;border-bottom:3px solid var(--purple2);}
+  .vs-cell.vs-aeros{background:rgba(46,134,255,0.14);}
+
+  .vs-symbol{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:700;flex:none;}
+  .vs-yes .vs-symbol{background:var(--white);color:#0A2038;}
+  .vs-no .vs-symbol{background:rgba(191,224,255,0.14);color:var(--lilac);border:1.5px solid var(--lilac);}
+  .vs-unknown .vs-symbol{background:transparent;color:var(--ink-dim);border:1.5px dashed var(--ink-dim);}
+  .vs-note{font-size:10.5px;color:var(--ink);font-weight:500;}
+  .vs-yes .vs-note{color:var(--white);font-weight:700;}
+  @media (max-width:900px){
+    .vs-table{grid-template-columns:1.15fr repeat(4,1fr);}
+    .vs-cell{padding:9px 4px;font-size:9px;}
+    .vs-note{display:none;}
+    .vs-cell.vs-label{padding-left:8px;font-size:11px;}
+  }
   .compare-item:last-child{border-bottom:none;}
 
   .value-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px;}
@@ -402,6 +431,15 @@
   .cta-slide .slide-inner{display:flex;flex-direction:column;align-items:center;}
   .cta-slide .slide-title{font-size:clamp(32px,5vw,60px);}
   .cta-slide .slide-sub{max-width:520px;margin-left:auto;margin-right:auto;text-align:center;}
+
+  .qr-row{display:flex;gap:32px;justify-content:center;margin-top:36px;}
+  .qr-box{display:flex;flex-direction:column;align-items:center;gap:11px;}
+  .qr-frame{position:relative;width:128px;height:128px;border-radius:12px;border:1.5px dashed var(--line);
+    background:var(--panel);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .qr-icon{width:66%;height:66%;color:var(--line);}
+  .qr-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px;}
+  .qr-label{font-size:10.5px;letter-spacing:0.09em;color:var(--ink-dim);font-weight:600;}
+
   .restart-btn{margin-top:38px;background:var(--purple);color:var(--white);border:none;border-radius:26px;
     font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.08em;padding:14px 30px;cursor:pointer;
     transition:transform 0.15s ease, background 0.15s ease;animation:glowPulseBlue 2.6s ease-in-out infinite;}
@@ -779,45 +817,66 @@
         </div>
       </div>
       <h3 style="font-size:16px;margin-top:44px;color:var(--white);">Where Point Solutions Fall Short</h3>
-      <div class="pillar-grid" style="margin-top:20px;">
-        <div class="pillar-card">
-          <svg class="mini-icon icon-vs" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-            <path class="chev chev-l" d="M18 12l-7 8 7 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path class="chev chev-r" d="M22 12l7 8-7 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span class="num">VS. ASSAIA</span>
-          <h3>Turnaround Analytics</h3>
-          <ul style="margin:12px 0 0;padding-left:18px;font-size:13px;color:var(--ink-dim);line-height:1.75;">
-            <li>Them: computer-vision insight per gate</li>
-            <li>Them: humans still make the call</li>
-            <li>AEROS: closes the loop with autonomous dispatch</li>
-          </ul>
+      <div class="vs-table">
+        <div class="vs-row vs-head">
+          <div class="vs-cell vs-label"></div>
+          <div class="vs-cell vs-aeros">AEROS</div>
+          <div class="vs-cell">Assaia</div>
+          <div class="vs-cell">Inform<br/>(GroundStar)</div>
+          <div class="vs-cell">Fraport<br/>AeroAS</div>
         </div>
-        <div class="pillar-card">
-          <svg class="mini-icon icon-vs" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-            <path class="chev chev-l" d="M18 12l-7 8 7 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path class="chev chev-r" d="M22 12l7 8-7 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span class="num">VS. INFORM (GROUNDSTAR)</span>
-          <h3>Resource Scheduling</h3>
-          <ul style="margin:12px 0 0;padding-left:18px;font-size:13px;color:var(--ink-dim);line-height:1.75;">
-            <li>Them: pre-planned shift &amp; fleet schedules</li>
-            <li>Them: static once the day begins</li>
-            <li>AEROS: re-optimizes continuously in real time</li>
-          </ul>
+        <div class="vs-row">
+          <div class="vs-cell vs-label">
+            <svg class="vs-label-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            Autonomous decisions
+          </div>
+          <div class="vs-cell vs-aeros vs-yes"><span class="vs-symbol">✓</span><span class="vs-note">Closes the loop autonomously</span></div>
+          <div class="vs-cell vs-no"><span class="vs-symbol">✗</span><span class="vs-note">Humans still make the call</span></div>
+          <div class="vs-cell vs-unknown"><span class="vs-symbol">–</span><span class="vs-note">Schedules are pre-planned</span></div>
+          <div class="vs-cell vs-unknown"><span class="vs-symbol">–</span><span class="vs-note">Not publicly disclosed</span></div>
         </div>
-        <div class="pillar-card">
-          <svg class="mini-icon icon-vs" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-            <path class="chev chev-l" d="M18 12l-7 8 7 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path class="chev chev-r" d="M22 12l7 8-7 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span class="num">VS. FRAPORT AeroAS</span>
-          <h3>In-House Build</h3>
-          <ul style="margin:12px 0 0;padding-left:18px;font-size:13px;color:var(--ink-dim);line-height:1.75;">
-            <li>Them: multi-year internal R&amp;D program</li>
-            <li>Them: single-airport, high capital cost</li>
-            <li>AEROS: deployable now, across any airport</li>
-          </ul>
+        <div class="vs-row">
+          <div class="vs-cell vs-label">
+            <svg class="vs-label-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 0115-6.7M21 12a9 9 0 01-15 6.7M17 3v4h-4M7 21v-4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Real-time re-optimization
+          </div>
+          <div class="vs-cell vs-aeros vs-yes"><span class="vs-symbol">✓</span><span class="vs-note">Re-optimizes continuously</span></div>
+          <div class="vs-cell vs-unknown"><span class="vs-symbol">–</span><span class="vs-note">Insight only, per gate</span></div>
+          <div class="vs-cell vs-no"><span class="vs-symbol">✗</span><span class="vs-note">Static once the day begins</span></div>
+          <div class="vs-cell vs-unknown"><span class="vs-symbol">–</span><span class="vs-note">Not publicly disclosed</span></div>
+        </div>
+        <div class="vs-row">
+          <div class="vs-cell vs-label">
+            <svg class="vs-label-icon icon-leaf" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+              <path class="leaf-shape" d="M20 6c9 2 13 9 12 18-8 3-16 0-18-8-1-5 1-8 6-10z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+              <path d="M14 30c4-6 10-10 16-14" stroke="currentColor" stroke-width="1.8" opacity="0.6"/>
+            </svg>
+            Carbon-cost optimization
+          </div>
+          <div class="vs-cell vs-aeros vs-yes"><span class="vs-symbol">✓</span><span class="vs-note">Weighed into every decision</span></div>
+          <div class="vs-cell vs-no"><span class="vs-symbol">✗</span><span class="vs-note">Not part of the platform</span></div>
+          <div class="vs-cell vs-no"><span class="vs-symbol">✗</span><span class="vs-note">Not part of the platform</span></div>
+          <div class="vs-cell vs-no"><span class="vs-symbol">✗</span><span class="vs-note">Not part of the platform</span></div>
+        </div>
+        <div class="vs-row">
+          <div class="vs-cell vs-label">
+            <svg class="vs-label-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18M12 3c2.5 2.5 4 5.7 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.7-4-9s1.5-6.5 4-9z" stroke="currentColor" stroke-width="1.8"/></svg>
+            Cross-airport deployment
+          </div>
+          <div class="vs-cell vs-aeros vs-yes"><span class="vs-symbol">✓</span><span class="vs-note">Deployable now, any airport</span></div>
+          <div class="vs-cell vs-unknown"><span class="vs-symbol">–</span><span class="vs-note">Not publicly disclosed</span></div>
+          <div class="vs-cell vs-unknown"><span class="vs-symbol">–</span><span class="vs-note">Not publicly disclosed</span></div>
+          <div class="vs-cell vs-no"><span class="vs-symbol">✗</span><span class="vs-note">Single-airport, high capex</span></div>
+        </div>
+        <div class="vs-row">
+          <div class="vs-cell vs-label">
+            <svg class="vs-label-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            No single point of failure
+          </div>
+          <div class="vs-cell vs-aeros vs-yes"><span class="vs-symbol">✓</span><span class="vs-note">Decentralized swarm fleet</span></div>
+          <div class="vs-cell vs-unknown"><span class="vs-symbol">–</span><span class="vs-note">Not publicly disclosed</span></div>
+          <div class="vs-cell vs-unknown"><span class="vs-symbol">–</span><span class="vs-note">Not publicly disclosed</span></div>
+          <div class="vs-cell vs-unknown"><span class="vs-symbol">–</span><span class="vs-note">Not publicly disclosed</span></div>
         </div>
       </div>
     </div>
@@ -1126,6 +1185,60 @@
       </svg>
       <h2 class="slide-title">AEROS: Redefining<br/>the Tarmac</h2>
       <p class="slide-sub">Join the evolution of autonomous, eco-responsive airport management.</p>
+      <div class="qr-row">
+        <div class="qr-box">
+          <div class="qr-frame">
+            <svg class="qr-icon" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+              <rect x="4" y="4" width="24" height="24" fill="none" stroke="currentColor" stroke-width="4"/>
+              <rect x="12" y="12" width="8" height="8" fill="currentColor"/>
+              <rect x="72" y="4" width="24" height="24" fill="none" stroke="currentColor" stroke-width="4"/>
+              <rect x="80" y="12" width="8" height="8" fill="currentColor"/>
+              <rect x="4" y="72" width="24" height="24" fill="none" stroke="currentColor" stroke-width="4"/>
+              <rect x="12" y="80" width="8" height="8" fill="currentColor"/>
+              <rect x="40" y="10" width="6" height="6" fill="currentColor"/>
+              <rect x="52" y="10" width="6" height="6" fill="currentColor"/>
+              <rect x="40" y="22" width="6" height="6" fill="currentColor"/>
+              <rect x="60" y="40" width="6" height="6" fill="currentColor"/>
+              <rect x="40" y="40" width="6" height="6" fill="currentColor"/>
+              <rect x="50" y="50" width="6" height="6" fill="currentColor"/>
+              <rect x="70" y="50" width="6" height="6" fill="currentColor"/>
+              <rect x="40" y="60" width="6" height="6" fill="currentColor"/>
+              <rect x="60" y="70" width="6" height="6" fill="currentColor"/>
+              <rect x="50" y="80" width="6" height="6" fill="currentColor"/>
+              <rect x="70" y="80" width="6" height="6" fill="currentColor"/>
+              <rect x="80" y="60" width="6" height="6" fill="currentColor"/>
+            </svg>
+            <img src="images/qr-contact.jpg" alt="QR code to contact AEROS" onerror="this.style.display='none'"/>
+          </div>
+          <span class="qr-label">CONTACT US</span>
+        </div>
+        <div class="qr-box">
+          <div class="qr-frame">
+            <svg class="qr-icon" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+              <rect x="4" y="4" width="24" height="24" fill="none" stroke="currentColor" stroke-width="4"/>
+              <rect x="12" y="12" width="8" height="8" fill="currentColor"/>
+              <rect x="72" y="4" width="24" height="24" fill="none" stroke="currentColor" stroke-width="4"/>
+              <rect x="80" y="12" width="8" height="8" fill="currentColor"/>
+              <rect x="4" y="72" width="24" height="24" fill="none" stroke="currentColor" stroke-width="4"/>
+              <rect x="12" y="80" width="8" height="8" fill="currentColor"/>
+              <rect x="40" y="10" width="6" height="6" fill="currentColor"/>
+              <rect x="52" y="10" width="6" height="6" fill="currentColor"/>
+              <rect x="40" y="22" width="6" height="6" fill="currentColor"/>
+              <rect x="60" y="40" width="6" height="6" fill="currentColor"/>
+              <rect x="40" y="40" width="6" height="6" fill="currentColor"/>
+              <rect x="50" y="50" width="6" height="6" fill="currentColor"/>
+              <rect x="70" y="50" width="6" height="6" fill="currentColor"/>
+              <rect x="40" y="60" width="6" height="6" fill="currentColor"/>
+              <rect x="60" y="70" width="6" height="6" fill="currentColor"/>
+              <rect x="50" y="80" width="6" height="6" fill="currentColor"/>
+              <rect x="70" y="80" width="6" height="6" fill="currentColor"/>
+              <rect x="80" y="60" width="6" height="6" fill="currentColor"/>
+            </svg>
+            <img src="images/qr-website.jpg" alt="QR code to AEROS website" onerror="this.style.display='none'"/>
+          </div>
+          <span class="qr-label">OUR WEBSITE</span>
+        </div>
+      </div>
       <button class="restart-btn" id="restartBtn">BACK TO START ↑</button>
     </div>
   </section>
