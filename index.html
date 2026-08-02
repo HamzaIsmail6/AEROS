@@ -124,6 +124,14 @@
     text-shadow:0 0 22px rgba(255,255,255,0.35);display:inline-block;}
   .stat-label{font-size:10.5px;letter-spacing:0.09em;color:rgba(255,255,255,0.88);margin-top:9px;line-height:1.5;}
 
+  .stat-ba{display:flex;align-items:baseline;justify-content:center;gap:9px;flex-wrap:wrap;}
+  .stat-ba .ba-before{font-family:'Sora',sans-serif;font-weight:700;font-size:clamp(15px,1.9vw,20px);
+    color:rgba(255,255,255,0.5);text-decoration:line-through;text-decoration-color:rgba(255,255,255,0.4);
+    text-decoration-thickness:1.5px;}
+  .stat-ba .ba-arrow{color:var(--lilac);font-size:17px;font-weight:700;}
+  .stat-ba .ba-after{font-family:'Sora',sans-serif;font-weight:800;font-size:clamp(28px,3.4vw,44px);
+    color:var(--white);text-shadow:0 0 22px rgba(255,255,255,0.35);}
+
   /* ---------- per-stat animated icons — floats as a badge above the card, doesn't push the number ---------- */
   .stat-icon-badge{position:absolute;top:-22px;left:50%;transform:translateX(-50%);width:46px;height:46px;
     background:linear-gradient(155deg,var(--purple),#1E5FA8 55%,var(--panel2));border:1px solid var(--line);
@@ -162,6 +170,23 @@
   .slide.in-view .icon-ai{animation:corePulse 2.4s ease-in-out infinite;}
 
   .source-line{margin-top:30px;font-size:11px;color:var(--ink-dim);line-height:1.7;max-width:760px;}
+
+  .roadmap-track{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:46px;}
+  .roadmap-track::before{content:'';position:absolute;top:15px;left:4%;right:4%;height:1px;
+    background:linear-gradient(90deg,transparent,var(--line) 8%,var(--line) 92%,transparent);z-index:0;}
+  .roadmap-step{position:relative;z-index:1;}
+  .roadmap-dot{width:30px;height:30px;border-radius:50%;background:linear-gradient(160deg,var(--panel),var(--panel2));
+    border:2px solid var(--purple);display:flex;align-items:center;justify-content:center;
+    font-family:'Sora',sans-serif;font-weight:700;font-size:12px;color:var(--white);margin-bottom:18px;
+    box-shadow:0 0 0 4px var(--void);}
+  .roadmap-phase{font-size:10px;letter-spacing:0.09em;color:var(--lilac);text-transform:uppercase;margin-bottom:3px;font-weight:600;}
+  .roadmap-time{font-size:10.5px;color:var(--ink-dim);margin-bottom:12px;letter-spacing:0.03em;}
+  .roadmap-step h3{font-size:15px;color:var(--white);margin-bottom:9px;font-weight:700;}
+  .roadmap-step p{font-size:12px;color:var(--ink-dim);line-height:1.65;}
+  @media (max-width:900px){
+    .roadmap-track{grid-template-columns:1fr;gap:26px;}
+    .roadmap-track::before{display:none;}
+  }
 
   .pillar-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px;}
   .pillar-card{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);
@@ -512,15 +537,14 @@
       </div>
       <h1 class="slide-title">AEROS:<br/>The Airport Brain</h1>
       <p class="slide-sub" style="font-size:16px;color:var(--lilac);margin-top:22px;">Redefining aviation with predictive intelligence.</p>
-      <p class="cover-tag">A.E.R.O.S.: Autonomous Eco-Responsive Airport Operating System.</p>
-       <p class="cover-tag">Powered by AI and Machine Learning.</p>
+      <p class="cover-tag">Autonomous Eco-Responsive Airport Operating System. Powered by AI and Machine Learnng.</p>
     </div>
     <div class="scroll-cue"><span>SCROLL TO EXPLORE</span><span class="chevron">↓</span></div>
   </section>
 
   <!-- 02 PROBLEM -->
   <section class="slide split-slide" id="s2">
-    <div class="slide-num"><b>02</b> / 17</div>
+    <div class="slide-num"><b>02</b> / 18</div>
     <div class="slide-inner">
       <div class="split-grid">
         <div>
@@ -565,7 +589,7 @@
 
   <!-- 03 COST -->
   <section class="slide" id="s3">
-    <div class="slide-num"><b>03</b> / 17</div>
+    <div class="slide-num"><b>03</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">The Cost of Inefficiency</div>
       <h2 class="slide-title">Billions Lost in<br/>Ground Operations</h2>
@@ -607,7 +631,7 @@
 
   <!-- 04 SOLUTION -->
   <section class="slide split-slide" id="s4">
-    <div class="slide-num"><b>04</b> / 17</div>
+    <div class="slide-num"><b>04</b> / 18</div>
     <div class="slide-inner">
       <div class="split-grid">
         <div>
@@ -652,7 +676,7 @@
 
   <!-- 05 PILLARS -->
   <section class="slide" id="s5">
-    <div class="slide-num"><b>05</b> / 17</div>
+    <div class="slide-num"><b>05</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">Core Technology Pillars</div>
       <h2 class="slide-title">Three Operational<br/>Pillars</h2>
@@ -694,7 +718,7 @@
 
   <!-- 06 ARCHITECTURE DIAGRAM -->
   <section class="slide" id="s6">
-    <div class="slide-num"><b>06</b> / 17</div>
+    <div class="slide-num"><b>06</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">System Architecture</div>
       <h2 class="slide-title">How the Airport<br/>Brain Connects</h2>
@@ -789,7 +813,7 @@
 
   <!-- 07 COMPETITIVE EDGE -->
   <section class="slide" id="s7">
-    <div class="slide-num"><b>07</b> / 17</div>
+    <div class="slide-num"><b>07</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">Market Positioning</div>
       <h2 class="slide-title">The Competitive Edge</h2>
@@ -885,7 +909,7 @@
 
   <!-- 08 MARKET -->
   <section class="slide" id="s8">
-    <div class="slide-num"><b>08</b> / 17</div>
+    <div class="slide-num"><b>08</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">Sizing the Opportunity</div>
       <h2 class="slide-title">Market Opportunity</h2>
@@ -926,7 +950,7 @@
 
   <!-- 08b BUSINESS MODEL -->
   <section class="slide" id="s8b">
-    <div class="slide-num"><b>09</b> / 17</div>
+    <div class="slide-num"><b>09</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">Go-To-Market</div>
       <h2 class="slide-title">Buisness Model</h2>
@@ -971,7 +995,7 @@
 
   <!-- 09 EFFICIENCY -->
   <section class="slide" id="s9">
-    <div class="slide-num"><b>10</b> / 17</div>
+    <div class="slide-num"><b>10</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">The AEROS Advantage</div>
       <h2 class="slide-title">Efficiency Driven<br/>by Intelligence</h2>
@@ -1018,7 +1042,7 @@
 
   <!-- 10 VALUE PROP -->
   <section class="slide" id="s10">
-    <div class="slide-num"><b>11</b> / 17</div>
+    <div class="slide-num"><b>11</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">Core Advantages</div>
       <h2 class="slide-title">The AEROS<br/>Value Proposition</h2>
@@ -1047,7 +1071,7 @@
 
   <!-- 11 MARKETING -->
   <section class="slide split-slide" id="s12">
-    <div class="slide-num"><b>12</b> / 17</div>
+    <div class="slide-num"><b>12</b> / 18</div>
     <div class="slide-inner">
       <div class="split-grid">
         <div>
@@ -1127,7 +1151,7 @@
 
  <!-- 13 LIVE DEMO -->
   <section class="slide" id="s11" style="padding-top:70px;padding-bottom:50px;">
-    <div class="slide-num"><b>14</b> / 17</div>
+    <div class="slide-num"><b>13</b> / 18</div>
     <div class="slide-inner" style="max-width:1280px;">
       <div class="eyebrow">See It In Action</div>
       <h2 class="slide-title">Live Operations Demo</h2>
@@ -1143,9 +1167,49 @@
     </div>
   </section>
 
+  <!-- 12b ROADMAP -->
+  <section class="slide" id="s12c">
+    <div class="slide-num"><b>14</b> / 18</div>
+    <div class="slide-inner">
+      <div class="eyebrow">The Path Forward</div>
+      <h2 class="slide-title">Our Roadmap</h2>
+      <p class="slide-sub">A staged rollout — proving the model at one airport before scaling the network.</p>
+      <div class="roadmap-track">
+        <div class="roadmap-step">
+          <div class="roadmap-dot">01</div>
+          <div class="roadmap-phase">Phase 1</div>
+          <div class="roadmap-time">Year 1</div>
+          <h3>Prototype &amp; Simulation</h3>
+          <p>Finalize the predictive engine and swarm coordination logic; validate against historical airport operations data.</p>
+        </div>
+        <div class="roadmap-step">
+          <div class="roadmap-dot">02</div>
+          <div class="roadmap-phase">Phase 2</div>
+          <div class="roadmap-time">Year 2</div>
+          <h3>Pilot Deployment</h3>
+          <p>Live apron pilot at one airport, integrated with existing ground fleet, gate systems, and turnaround workflows — run long enough to capture a full seasonal cycle.</p>
+        </div>
+        <div class="roadmap-step">
+          <div class="roadmap-dot">03</div>
+          <div class="roadmap-phase">Phase 3</div>
+          <div class="roadmap-time">Years 3–4</div>
+          <h3>Local Rollout — Egypt</h3>
+          <p>Expand from the pilot to additional Egyptian airports, replicating the integration playbook and onboarding local ground-fleet partners.</p>
+        </div>
+        <div class="roadmap-step">
+          <div class="roadmap-dot">04</div>
+          <div class="roadmap-phase">Phase 4</div>
+          <div class="roadmap-time">Year 5+</div>
+          <h3>Regional Rollout</h3>
+          <p>Extend beyond Egypt into additional Middle East &amp; Africa markets, adapting to each country's regulatory and airport-operator landscape.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- 12 ASK (RESOURCES) -->
   <section class="slide" id="s12b">
-    <div class="slide-num"><b>13</b> / 17</div>
+    <div class="slide-num"><b>15</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">What We Need to Scale</div>
       <h2 class="slide-title">Our Ask: Resources,<br/>Not Just Capital</h2>
@@ -1185,7 +1249,7 @@
 
   <!-- 14 LEADERSHIP -->
   <section class="slide" id="s13">
-    <div class="slide-num"><b>15</b> / 17</div>
+    <div class="slide-num"><b>16</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">Our Leadership</div>
       <h2 class="slide-title">The Minds Behind AEROS</h2>
@@ -1202,7 +1266,7 @@
 
   <!-- 15 REFERENCES -->
   <section class="slide" id="s14">
-    <div class="slide-num"><b>16</b> / 17</div>
+    <div class="slide-num"><b>17</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow">Sources &amp; Further Reading</div>
       <h2 class="slide-title">References</h2>
@@ -1223,7 +1287,7 @@
 
   <!-- 16 CLOSING -->
   <section class="slide cta-slide" id="s15">
-    <div class="slide-num"><b>17</b> / 17</div>
+    <div class="slide-num"><b>18</b> / 18</div>
     <div class="slide-inner">
       <div class="eyebrow" style="justify-content:center;">Ready for Takeoff</div>
       <svg class="cta-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true">
@@ -1397,7 +1461,7 @@
     entries.forEach(function(e){
       if (e.isIntersecting){
         e.target.classList.add('in-view');
-        var vals = e.target.querySelectorAll('.stat-value');
+        var vals = e.target.querySelectorAll('.stat-value, .ba-after');
         vals.forEach(function(v){ animateCount(v); });
       }
     });
